@@ -69,8 +69,8 @@ Todo card deve conter os seguintes tópicos obrigatórios:
 
 - **Linguagem Padrão**: TypeScript (ESM, Node.js >= 22.x)
 - **Convenção de Idiomas**:
-  - Código-fonte, variáveis, nomes de funções, classes, schemas, commits, issues e Pull Requests estritamente em **inglês**.
-  - Comunicação, chat e alinhamento com o dono em **português (pt-BR)**.
+  - Código-fonte, variáveis, nomes de funções, classes, schemas, commits estritamente em **inglês**.
+  - Issues e Pull Requests, Comunicação, chat e alinhamento com o dono em **português (pt-BR)**.
 - **Dependências**: Prefira bibliotecas padronizadas, ativamente mantidas e leves. Zero dependência supérflua sem justificativa expressa no card.
 
 ### Diretrizes Arquiteturais Preferidas pelo Dono
