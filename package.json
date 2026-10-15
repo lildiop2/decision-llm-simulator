@@ -1,0 +1,49 @@
+{
+  "name": "decision-llm-simulator",
+  "version": "1.0.0",
+  "description": "Simulation and benchmarking engine for Decision-Making LLMs using TypeScript, Zod, and Ollama",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "decision-sim": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "sim": "tsx src/cli.ts",
+    "start": "node dist/cli.js"
+  },
+  "keywords": [
+    "ollama",
+    "decision-making",
+    "llm",
+    "simulator",
+    "zod",
+    "typescript",
+    "benchmark"
+  ],
+  "author": "decision-llm-simulator contributors",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "ora": "^8.2.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/node": "^22.13.9",
+    "eslint": "^9.21.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0",
+    "vitest": "^3.0.8"
+  }
+}
