@@ -99,7 +99,7 @@ program
 
 // 3. Comando: run
 program
-  .command('run [scenarioId]')
+  .command('run [scenarioId] [model]')
   .description('Executar simulação de decisão para um cenário específico')
   .option('-m, --model <name>', 'Modelo Ollama a utilizar', process.env.OLLAMA_MODEL || 'tev1:0.8b')
   .option(
@@ -109,10 +109,11 @@ program
   )
   .option('-t, --temperature <number>', 'Temperatura de amostragem', '0.2')
   .option('-s, --save', 'Salvar relatório de execução no diretório reports/', false)
-  .action(async (scenarioId, options) => {
+  .action(async (scenarioId, modelArg, options) => {
     ConsoleReporter.printHeader();
 
     const targetId = scenarioId || 'incident_database_failover';
+    const targetModel = modelArg || options.model || process.env.OLLAMA_MODEL || 'tev1:0.8b';
     const scenario = getScenarioById(targetId);
 
     if (!scenario) {
@@ -128,12 +129,12 @@ program
     const simulator = new DecisionSimulator(client);
 
     const spinner = ora(
-      `Executando cenário "${scenario.title}" com o modelo "${options.model}"...`
+      `Executando cenário "${scenario.title}" com o modelo "${targetModel}"...`
     ).start();
 
     try {
       const result = await simulator.runScenario(scenario, {
-        model: options.model,
+        model: targetModel,
         temperature: parseFloat(options.temperature),
         ollamaHost: options.host
       });
@@ -155,7 +156,7 @@ program
 
 // 4. Comando: benchmark
 program
-  .command('benchmark')
+  .command('benchmark [models] [scenarios]')
   .description('Executar matriz comparativa de benchmark entre múltiplos modelos e cenários')
   .option(
     '-m, --models <names>',
@@ -169,14 +170,17 @@ program
   )
   .option('-t, --temperature <number>', 'Temperatura de amostragem', '0.1')
   .option('-s, --scenarios <ids>', 'IDs dos cenários separados por vírgula (ou "all")', 'all')
-  .action(async (options) => {
+  .action(async (modelsArg, scenariosArg, options) => {
     ConsoleReporter.printHeader();
 
-    const modelsList = options.models.split(',').map((m: string) => m.trim());
+    const rawModels = modelsArg || options.models || 'tev1:0.8b,llama3.2:latest';
+    const rawScenarios = scenariosArg || options.scenarios || 'all';
+
+    const modelsList = rawModels.split(',').map((m: string) => m.trim());
     let scenariosToRun = getAllScenarios();
 
-    if (options.scenarios !== 'all') {
-      const requestedIds = options.scenarios.split(',').map((id: string) => id.trim());
+    if (rawScenarios !== 'all') {
+      const requestedIds = rawScenarios.split(',').map((id: string) => id.trim());
       scenariosToRun = scenariosToRun.filter((s) => requestedIds.includes(s.id));
     }
 
