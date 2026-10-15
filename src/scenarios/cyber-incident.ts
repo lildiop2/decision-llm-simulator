@@ -2,29 +2,30 @@ import type { Scenario } from '../types/schemas.js';
 
 export const cyberIncidentScenario: Scenario = {
   id: 'cyber_ransomware_containment',
-  title: 'Active Ransomware Containment in Financial Network',
-  category: 'cybersecurity',
+  title: 'Contenção Ativa de Ransomware em Rede Bancária',
+  category: 'ciberseguranca',
   description:
-    'Contain active lateral movement of BlackCat ransomware variant across corporate core banking subnets without interrupting international wire settlement.',
+    'Conter movimentação lateral de ransomware BlackCat na rede corporativa sem interromper a câmara de liquidação financeira internacional.',
   context:
-    'SOC alerts indicate an attacker has compromised an administrative jump box in the corporate operations VLAN and initiated PsExec lateral movements toward database clusters. 3 non-critical file servers have had extensions renamed. Active directory ticket extraction is ongoing. The Central Bank Real-Time Gross Settlement (RTGS) gateway shares a dedicated border router.',
+    'Alertas do SOC indicam que o invasor comprometeu um jump host administrativo na VLAN operacional e iniciou conexões PsExec contra clusters de banco de dados. 3 servidores de arquivos secundários tiveram arquivos criptografados. Extração de tickets Kerberos do Active Directory está em andamento. O gateway de liquidação RTGS do Banco Central compartilha o roteador de borda.',
   stateVariables: {
-    compromised_hosts_count: 3,
-    active_ad_enumeration: true,
-    rtgs_gateway_status: 'online',
-    ransomware_strain: 'BlackCat/ALPHV',
-    encryption_rate_mb_per_sec: 45
+    hosts_comprometidos_qtd: 3,
+    enumeracao_ad_ativa: true,
+    status_gateway_rtgs: 'online',
+    variante_ransomware: 'BlackCat/ALPHV',
+    taxa_criptografia_mb_por_segundo: 45
   },
   goals: [
     {
       id: 'g_contain_spread',
-      description: 'Halt encryption spread and prevent domain controller compromise.',
+      description:
+        'Bloquear a disseminação da criptografia e impedir comprometimento dos Domain Controllers.',
       priority: 'primary',
       weight: 1.0
     },
     {
       id: 'g_preserve_rtgs',
-      description: 'Maintain uninterrupted operation of the RTGS interbank settlement gateway.',
+      description: 'Manter a operação contínua e ininterrupta do gateway interbancário RTGS.',
       priority: 'primary',
       weight: 1.0
     }
@@ -33,14 +34,13 @@ export const cyberIncidentScenario: Scenario = {
     {
       id: 'c_rtgs_continuity',
       description:
-        'Severing the RTGS settlement gateway triggers mandatory regulatory fines and systemic liquidity halt; cannot be disconnected without C-level mandate.',
+        'Desconectar o gateway RTGS acarreta multas regulatórias severas e congelamento de liquidez sistêmica; proibido desconectar sem aval da diretoria.',
       isHardConstraint: true,
       forbiddenActionIds: ['total_datacenter_internet_sever']
     },
     {
       id: 'c_evidence_preservation',
-      description:
-        'Wiping domain controllers destroys forensic evidence needed for insurer claims.',
+      description: 'Formatar os servidores apaga evidências forenses cruciais para o seguro.',
       isHardConstraint: false,
       forbiddenActionIds: ['format_all_domain_controllers']
     }
@@ -48,47 +48,46 @@ export const cyberIncidentScenario: Scenario = {
   availableActions: [
     {
       id: 'total_datacenter_internet_sever',
-      title: 'Pull Datacenter Main Fiber Uplinks (Total Blackout)',
+      title: 'Desconectar Fibra Óptica Principal do Datacenter (Apagão Total)',
       description:
-        'Physically sever all internet and interbank connectivity for the entire enterprise datacenter.',
+        'Cortar fisicamente todos os uplinks de internet e tráfego interbancário do datacenter inteiro.',
       cost: 50000,
       risk: 'critical',
       expectedImpact:
-        'Stops attacker communication but shuts down interbank RTGS, causing multi-million regulatory penalties.'
+        'Interrompe o invasor, mas derruba o sistema financeiro RTGS gerando penalidades regulatórias milionárias.'
     },
     {
       id: 'format_all_domain_controllers',
-      title: 'Emergency Remote Factory Reset of All Active Directory Servers',
-      description:
-        'Issue mass wiping command to all domain controllers and administrative servers.',
+      title: 'Restauração de Fábrica em Massa de Todos os Controladores de Domínio',
+      description: 'Emitir comando de wipe remoto em todos os servidores Active Directory.',
       cost: 20000,
       risk: 'critical',
       expectedImpact:
-        'Destroys all identity infrastructure and forensic logs; recovery requires weeks of offline rebuilding.'
+        'Destrói a infraestrutura de identidade e os logs forenses; recuperação exigirá semanas de reconstrução offline.'
     },
     {
       id: 'microsegment_vlan_and_revoke_kerberos',
-      title: 'Isolate Corporate Operations VLAN, Revoke Kerberos KRBTGT & Reset Credentials',
+      title: 'Microsegmentar VLAN Operacional, Revogar KRBTGT e Resetar Credenciais',
       description:
-        'Push automated SDN micro-segmentation ACLs to isolate the corporate operations subnet, sever jump host access, invalidate KRBTGT twice to stop golden ticket forging, and preserve the dedicated isolated RTGS gateway tunnel untouched.',
+        'Aplicar regras automatizadas de SDN isolando a subnet comprometida, invalidar a conta KRBTGT duas vezes para bloquear golden tickets e manter o túnel seguro do RTGS 100% operacional.',
       cost: 1500,
       risk: 'medium',
       expectedImpact:
-        'Contains lateral spread in under 90 seconds while keeping core payment settlement 100% operational.'
+        'Contém a movimentação lateral em menos de 90 segundos enquanto preserva as liquidações bancárias intactas.'
     },
     {
       id: 'monitor_and_passive_honeypot',
-      title: 'Passive Monitoring and Deploying Decoy Honeypots',
+      title: 'Apenas Monitorar e Implantar Honeypots Isca',
       description:
-        'Observe attacker maneuvers without blocking connections to map full command & control infrastructure.',
+        'Apenas observar manobras do invasor sem bloquear tráfego para tentar mapear sua infraestrutura C2.',
       cost: 500,
       risk: 'high',
       expectedImpact:
-        'Attacker reaches core database clusters within 12 minutes, locking customer accounts.'
+        'O invasor alcança os bancos de dados em 12 minutos, travando as contas dos clientes.'
     }
   ],
   optimalActionId: 'microsegment_vlan_and_revoke_kerberos',
   acceptableAlternativeIds: ['monitor_and_passive_honeypot'],
   forbiddenActionIds: ['total_datacenter_internet_sever', 'format_all_domain_controllers'],
-  tags: ['cybersecurity', 'incident-response', 'banking', 'containment']
+  tags: ['ciberseguranca', 'resposta-a-incidentes', 'bancos', 'contencao']
 };

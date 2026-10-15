@@ -1,155 +1,155 @@
-# 🧠 Decision LLM Simulator
+# 🧠 Simulador de Modelos de Decisão (Decision LLM Simulator)
 
-A simulation, evaluation, and benchmarking engine for **Decision-Making Large Language Models** (e.g., `tev1:0.8b`, `llama3.2`, `qwen3.5`, `deepseek-r1`) built with **TypeScript**, **Zod**, and local **Ollama**.
-
----
-
-## 🌟 Highlights
-
-- **Strict Schema Enforcement via Zod**: Enforces structured decision contracts including thought process, action selection, parameters, confidence rating, calibrated risk level, rejected alternatives, and contingency plans.
-- **Resilient Output Parsing & Auto-Repair**: Automatic extraction and cleaning of markdown fences, `<think>...</think>` reasoning tags, and intelligent auto-repair of truncated JSON responses.
-- **Automated Rule & Constraint Auditing**: Evaluates hard and soft operational constraints, penalizing catastrophic safety violations and scoring goal alignment, risk calibration, and reasoning depth.
-- **Dynamic Multi-Turn Environments**: Interactive incident response simulator (`IncidentManagementEnvironment`) where model actions drive real-time environmental state transitions over consecutive turns.
-- **Cross-Model Benchmarking**: Compare multiple local Ollama models across high-stakes operational scenarios with automated Markdown and JSON reporting.
-- **Production-Ready CLI & SDK**: Rich terminal tables, spinners, and structured outputs for both interactive command-line use and programmatic TypeScript integration.
+Motor de simulação, avaliação e benchmarking para **Modelos de Linguagem Focados em Tomada de Decisão** (ex: `tev1:0.8b`, `llama3.2`, `qwen3.5`, `deepseek-r1`) desenvolvido com **TypeScript**, **Zod** e **Ollama**.
 
 ---
 
-## 🏗️ Architecture
+## 🌟 Destaques do Projeto
+
+- **Contratos Estritos com Zod**: Validação robusta de saídas estruturadas contendo ação escolhida, justificativa de risco, processo de raciocínio passo a passo, estimativa de confiança, alternativas descartadas e plano de contingência.
+- **Parser Resiliente com Auto-Reparo**: Extração inteligente de blocos de pensamento `<think>...</think>`, markdown code fences e reparo automático de JSONs truncados por limite de tokens.
+- **Auditoria de Regras e Restrições**: Verificação automática de restrições rígidas (_hard constraints_) e suaves (_soft constraints_), aplicando penalidades a violações catastróficas e pontuando calibração de risco e otimalidade (0 a 100).
+- **Ambiente Dinâmico Multi-Turno**: Simulação de resposta a incidentes (`IncidentManagementEnvironment`) onde as ações do modelo impactam diretamente a telemetria (saúde do cluster, erros de checkout, orçamento e satisfação) ao longo de turnos sucessivos.
+- **Benchmarking Comparativo entre Modelos**: Execução de matrizes de testes comparando modelos locais com geração de relatórios detalhados em Markdown e JSON salvos em `reports/`.
+- **CLI Interativa & SDK Modular**: Interface de linha de comando com tabelas, spinners e cores via Commander, Chalk e Ora, além de exportação modular como biblioteca TypeScript.
+
+---
+
+## 🏗️ Arquitetura
 
 ```mermaid
 flowchart TD
-    A["Scenario Registry (scenarios/)"] --> B["Prompt Builder"]
-    B --> C["Ollama Client (HTTP REST)"]
-    C --> D["Local Ollama Server (11434)"]
-    D --> E["Raw Model Output (JSON / Think Tags)"]
-    E --> F["Response Parser (Zod Validation & Auto-Repair)"]
-    F --> G["Decision Evaluator"]
-    G --> H["Scoring & Diagnostics (0-100)"]
+    A["Registro de Cenários (src/scenarios/)"] --> B["Prompt Builder (src/engine/)"]
+    B --> C["Cliente Ollama HTTP REST"]
+    C --> D["Servidor Ollama Local (:11434)"]
+    D --> E["Saída Bruta do Modelo (JSON / Tags Think)"]
+    E --> F["Response Parser (Validação Zod & Auto-Reparo)"]
+    F --> G["Decision Evaluator (Auditoria de Regras)"]
+    G --> H["Score e Diagnósticos (0-100)"]
     H --> I["Console Reporter / File Reporter (Markdown + JSON)"]
-    H --> J["Multi-Turn Environment State Transition"]
+    H --> J["Transição de Estado no Ambiente Multi-Turno"]
 ```
 
 ---
 
-## 📦 Tech Stack
+## 📦 Stack Tecnológica
 
-- **Runtime**: Node.js >= 22.x (native ESM)
-- **Language**: TypeScript 5.8
-- **Schema Validation**: Zod 3.24
-- **LLM Engine**: Ollama (local API)
-- **CLI Framework**: Commander.js + Chalk + Ora + Cli-Table3
-- **Test Framework**: Vitest (100% passing test suite)
-- **Linting & Formatting**: ESLint (v9 flat config) + Prettier
+- **Runtime**: Node.js >= 22.x (ESM nativo)
+- **Linguagem**: TypeScript 5.8
+- **Validação de Schemas**: Zod 3.24
+- **Engine de IA**: Ollama API local (`http://localhost:11434`)
+- **CLI & Visualização**: Commander.js + Chalk + Ora + Cli-Table3
+- **Test Runner**: Vitest (100% de aprovação)
+- **Padronização de Código**: ESLint (v9 flat config) + Prettier
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Guia de Início Rápido
 
-### 1. Prerequisites
+### 1. Pré-requisitos
 
-Ensure [Ollama](https://ollama.com) is running locally and at least one model is downloaded:
+Certifique-se de que o [Ollama](https://ollama.com) está em execução localmente e possui ao menos um modelo baixado:
 
 ```bash
-# Check Ollama status
+# Verificar se o Ollama está ativo
 curl http://localhost:11434/api/tags
 
-# Pull recommended lightweight decision models if needed
+# Baixar modelos recomendados (caso ainda não possua)
 ollama pull llama3.2:latest
-# or
+# ou modelo especializado em decisão:
 ollama pull tev1:0.8b
 ```
 
-### 2. Installation
+### 2. Instalação e Compilação
 
 ```bash
-git clone <repository-url>
+git clone <url-do-repositorio>
 cd decision-llm-simulator
 npm install
 npm run build
 ```
 
-### 3. Running the Simulator
+### 3. Executando o Simulador
 
-#### Discover Local Models & Capabilities
+#### Listar Modelos Instalados e Capacidades
 
 ```bash
 npx tsx src/cli.ts list-models
-# or after build:
+# ou via executável compilado:
 node dist/cli.js list-models
 ```
 
-#### List Available Scenarios
+#### Listar Cenários Disponíveis
 
 ```bash
 node dist/cli.js list-scenarios
 ```
 
-#### Run a Single Scenario Simulation
+#### Executar Simulação de um Cenário
 
 ```bash
-# Run database failover scenario with llama3.2
+# Simular failover de banco de dados com llama3.2 e salvar relatório
 node dist/cli.js run incident_database_failover --model llama3.2:latest --save
 
-# Run UAV route replanning scenario
+# Simular replanejamento de rota de drone sob tempestade
 node dist/cli.js run drone_route_replanning --model llama3.2:latest
 ```
 
-#### Run a Multi-Turn Interactive Environment
+#### Executar Simulação de Ambiente Dinâmico Multi-Turno
 
 ```bash
-# Simulates a dynamic incident response scenario over consecutive turns
+# O modelo enfrenta uma crise operacional durante 4 turnos interativos
 node dist/cli.js env --model llama3.2:latest
 ```
 
-#### Run a Comparative Benchmark Matrix
+#### Executar Matriz de Benchmark Comparativo
 
 ```bash
-# Benchmark models across scenarios and output comparison report
-node dist/cli.js benchmark --models "llama3.2:latest,tev1:0.8b" --scenarios all
+# Compara desempenho entre modelos e gera relatórios em reports/
+node dist/cli.js benchmark --models "llama3.2:latest" --scenarios all
 ```
 
 ---
 
-## 📋 Built-in Scenarios
+## 📋 Cenários Integrados
 
-| Scenario ID                    | Title                                              | Domain                 | Key Hard Constraint                                              |
-| :----------------------------- | :------------------------------------------------- | :--------------------- | :--------------------------------------------------------------- |
-| `incident_database_failover`   | Critical Database Failover Under Peak Traffic      | Infrastructure / SRE   | Zero committed data loss (no uncoordinated force failover)       |
-| `disaster_relief_logistics`    | Emergency Flood Relief Resource Allocation         | Humanitarian Logistics | Max 1,200L fuel reserve, no night flights in degraded visibility |
-| `drone_route_replanning`       | Autonomous UAV Route Replanning in Severe Storm    | Robotics & Aviation    | Prohibited military airspace (Zone R-4402), 8% battery reserve   |
-| `cyber_ransomware_containment` | Active Ransomware Containment in Financial Network | Cybersecurity          | Continuous uptime for RTGS wire settlement gateway               |
+| ID do Cenário                  | Título                                                  | Domínio               | Restrição Rígida Principal                                                       |
+| :----------------------------- | :------------------------------------------------------ | :-------------------- | :------------------------------------------------------------------------------- |
+| `incident_database_failover`   | Failover Crítico de Banco de Dados sob Tráfego de Pico  | Infraestrutura / SRE  | Tolerância zero à perda de dados (proibido failover forçado sem sincronização)   |
+| `disaster_relief_logistics`    | Alocação de Recursos em Emergência de Inundação         | Logística Humanitária | Limite máximo de 1.200L de combustível; proibido voo noturno sob clima degradado |
+| `drone_route_replanning`       | Replanejamento Autônomo de Rota de Drone sob Tempestade | Robótica & Aviação    | Espaço aéreo militar proibido (Zona R-4402); reserva mínima de 8% de bateria     |
+| `cyber_ransomware_containment` | Contenção Ativa de Ransomware em Rede Bancária          | Cibersegurança        | Manter operação ininterrupta do gateway RTGS de liquidação bancária              |
 
 ---
 
-## 🧪 Testing & Validation
+## 🧪 Validação e Testes
 
-Run the test suite, linting, and build validation (per `AGENT.md` governance):
+Todos os comandos de validação do projeto (definidos em [`AGENT.md`](./AGENT.md)) garantem integridade total com **exit code 0**:
 
 ```bash
-# Run unit and integration tests
+# Executar suíte de testes unitários e de integração
 npm test
 
-# Run ESLint
+# Verificação estática de tipos e compilação
+npm run build
+
+# Análise de linting
 npm run lint
 
-# Check formatting
+# Verificação de formatação de código
 npm run format:check
-
-# Compile TypeScript
-npm run build
 ```
 
 ---
 
-## 📜 Governance & Workflow
+## 📜 Governança e Fluxo de Desenvolvimento
 
-This repository strictly enforces **Issue-Driven Development** and atomic feature branches:
+Este repositório adota **Desenvolvimento Orientado a Issues** e branches atômicas:
 
-- See [`AGENT.md`](./AGENT.md) for branch naming (`feature/<name-of-feature>`), commit conventions, and Definition of Done (DoD).
+- Consulte o [`AGENT.md`](./AGENT.md) para detalhes de convenção de branches (`feature/<name-of-feature>`), commits semânticos e Critérios de Aceite (DoD).
 
 ---
 
-## 📄 License
+## 📄 Licença
 
 MIT © decision-llm-simulator contributors

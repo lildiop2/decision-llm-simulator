@@ -51,12 +51,12 @@ export class ResponseParser {
           }
         }
       } catch (err: unknown) {
-        errors.push(`JSON Parse Error: ${err instanceof Error ? err.message : String(err)}`);
+        errors.push(`Erro ao analisar JSON: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
     if (jsonCandidates.length === 0) {
-      errors.push('No valid JSON object structure found in LLM response');
+      errors.push('Nenhuma estrutura JSON válida encontrada na resposta do modelo');
     }
 
     return {

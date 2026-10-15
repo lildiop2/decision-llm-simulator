@@ -5,53 +5,62 @@ import type { EnvironmentTurnResult } from '../engine/environment.js';
 
 export class ConsoleReporter {
   /**
-   * Prints the header banner for the simulator.
+   * Imprime o banner de cabeçalho do simulador.
    */
   public static printHeader(): void {
     console.log(chalk.bold.cyan('\n======================================================'));
-    console.log(chalk.bold.magenta('       🧠 DECISION LLM SIMULATOR (TS + Zod + Ollama)'));
-    console.log(chalk.gray('  High-Stakes Decision Benchmarking & Environment Simulation'));
+    console.log(
+      chalk.bold.magenta('       🧠 SIMULADOR DE MODELOS DE DECISÃO (TS + Zod + Ollama)')
+    );
+    console.log(chalk.gray('  Benchmarking de Decisões de Alto Impacto & Simulação de Ambientes'));
     console.log(chalk.bold.cyan('======================================================\n'));
   }
 
   /**
-   * Prints a formatted simulation step result.
+   * Imprime o resultado formatado de um passo de simulação.
    */
   public static printStepResult(result: SimulationStepResult): void {
     const { scenarioTitle, model, decision, evaluation } = result;
 
-    console.log(chalk.bold.blue(`\n▶ Scenario: `) + chalk.white.bold(scenarioTitle));
+    console.log(chalk.bold.blue(`\n▶ Cenário: `) + chalk.white.bold(scenarioTitle));
     console.log(
-      chalk.bold.gray(`  Model: `) +
+      chalk.bold.gray(`  Modelo: `) +
         chalk.yellow(model) +
-        chalk.gray(` | Latency: ${evaluation.latencyMs}ms`)
+        chalk.gray(` | Latência: ${evaluation.latencyMs}ms`)
     );
 
     if (decision) {
-      console.log(chalk.bold('\n── [Model Decision] ───────────────────────────────────'));
-      console.log(chalk.cyan('Action Chosen: ') + chalk.bold.green(decision.selectedAction));
+      console.log(chalk.bold('\n── [Decisão do Modelo] ───────────────────────────────────'));
       console.log(
-        chalk.cyan('Confidence:    ') +
+        chalk.cyan('Ação Escolhida:        ') + chalk.bold.green(decision.selectedAction)
+      );
+      console.log(
+        chalk.cyan('Confiança:             ') +
           chalk.yellow(`${(decision.confidence * 100).toFixed(1)}%`) +
-          chalk.cyan(' | Risk Level: ') +
+          chalk.cyan(' | Nível de Risco: ') +
           this.formatRiskLevel(decision.riskLevel)
       );
-      console.log(chalk.cyan('Risk Rationale: ') + chalk.white(decision.riskRationale));
-      console.log(chalk.cyan('Thought Process: ') + chalk.italic.gray(decision.thoughtProcess));
+      console.log(chalk.cyan('Justificativa de Risco: ') + chalk.white(decision.riskRationale));
+      console.log(
+        chalk.cyan('Linha de Raciocínio:   ') + chalk.italic.gray(decision.thoughtProcess)
+      );
 
       if ((decision.rejectedAlternatives?.length ?? 0) > 0) {
-        console.log(chalk.cyan('Rejected Alternatives:'));
+        console.log(chalk.cyan('Alternativas Rejeitadas:'));
         for (const alt of decision.rejectedAlternatives ?? []) {
           console.log(`  • ${chalk.yellow(alt.actionId)}: ${chalk.gray(alt.reason)}`);
         }
       }
 
-      console.log(chalk.cyan('Contingency Plan: ') + chalk.white(decision.contingencyPlan));
+      console.log(
+        chalk.cyan('Plano de Contingência: ') +
+          chalk.white(decision.contingencyPlan || 'Nenhum declarado')
+      );
     } else {
-      console.log(chalk.red.bold('\n❌ Model failed to produce a structured decision schema!'));
+      console.log(chalk.red.bold('\n❌ O modelo falhou ao gerar um schema de decisão válido!'));
     }
 
-    console.log(chalk.bold('\n── [Automated Evaluation & Scoring] ────────────────────'));
+    console.log(chalk.bold('\n── [Avaliação e Pontuação Automatizada] ────────────────────'));
     const scoreColor =
       evaluation.totalScore >= 80
         ? chalk.green
@@ -59,24 +68,24 @@ export class ConsoleReporter {
           ? chalk.yellow
           : chalk.red;
     console.log(
-      chalk.bold('Total Score:       ') + scoreColor.bold(`${evaluation.totalScore}/100`)
+      chalk.bold('Pontuação Total:          ') + scoreColor.bold(`${evaluation.totalScore}/100`)
     );
     console.log(
-      chalk.bold('Constraint Check:  ') +
+      chalk.bold('Checagem de Restrições:   ') +
         (evaluation.passedHardConstraints
-          ? chalk.green('✔ Passed all hard constraints')
-          : chalk.red.bold('✖ VIOLATED HARD CONSTRAINT'))
+          ? chalk.green('✔ Respeitou todas as restrições rígidas')
+          : chalk.red.bold('✖ VIOLOU RESTRIÇÃO RÍGIDA'))
     );
     console.log(
-      chalk.bold('Optimality:        ') +
+      chalk.bold('Otimalidade da Escolha:   ') +
         (evaluation.isOptimal
-          ? chalk.green('✔ Optimal Action Selected')
+          ? chalk.green('✔ Ação Ótima Selecionada')
           : evaluation.isAcceptable
-            ? chalk.yellow('⚠ Acceptable Alternative Selected')
-            : chalk.red('✖ Suboptimal / Ineffective Action'))
+            ? chalk.yellow('⚠ Alternativa Aceitável Selecionada')
+            : chalk.red('✖ Ação Subótima ou Ineficaz'))
     );
 
-    console.log(chalk.bold('\nFeedback & Diagnostics:'));
+    console.log(chalk.bold('\nDiagnósticos e Feedbacks:'));
     for (const f of evaluation.feedback) {
       console.log(`  - ${f}`);
     }
@@ -84,21 +93,23 @@ export class ConsoleReporter {
   }
 
   /**
-   * Prints the summary table for benchmark runs across multiple models.
+   * Imprime a tabela de resumo para execuções de benchmark entre múltiplos modelos.
    */
   public static printBenchmarkReport(report: BenchmarkReport): void {
-    console.log(chalk.bold.magenta('\n📊 BENCHMARK COMPARISON MATRIX'));
-    console.log(chalk.gray(`Suite: ${report.suiteTitle} | Total Runs: ${report.totalRuns}\n`));
+    console.log(chalk.bold.magenta('\n📊 MATRIZ COMPARATIVA DE BENCHMARK'));
+    console.log(
+      chalk.gray(`Conjunto: ${report.suiteTitle} | Total de Execuções: ${report.totalRuns}\n`)
+    );
 
     const table = new Table({
       head: [
-        chalk.cyan('Model'),
-        chalk.cyan('Runs'),
+        chalk.cyan('Modelo'),
+        chalk.cyan('Execuções'),
         chalk.cyan('Schema %'),
-        chalk.cyan('Constraints %'),
-        chalk.cyan('Optimal %'),
-        chalk.cyan('Avg Score'),
-        chalk.cyan('Avg Latency')
+        chalk.cyan('Restrições %'),
+        chalk.cyan('Ótima %'),
+        chalk.cyan('Score Médio'),
+        chalk.cyan('Latência Média')
       ],
       style: { head: [], border: [] }
     });
@@ -128,42 +139,44 @@ export class ConsoleReporter {
   }
 
   /**
-   * Prints environmental turn progression.
+   * Imprime a progressão de cada turno da simulação de ambiente.
    */
   public static printEnvironmentTurn(turnResult: EnvironmentTurnResult): void {
     console.log(
-      chalk.bold.cyan(`\n── Turn ${turnResult.turn} Progression ──────────────────────────────`)
+      chalk.bold.cyan(`\n── Progressão do Turno ${turnResult.turn} ──────────────────────────────`)
     );
     console.log(
-      chalk.yellow('Action Executed: ') +
-        chalk.bold.green(turnResult.actionTaken?.selectedAction || 'None')
+      chalk.yellow('Ação Executada: ') +
+        chalk.bold.green(turnResult.actionTaken?.selectedAction || 'Nenhuma')
     );
-    console.log(chalk.white(`Outcome: ${turnResult.outcomeMessage}`));
+    console.log(chalk.white(`Desfecho: ${turnResult.outcomeMessage}`));
 
     const m = turnResult.metrics;
     console.log(
       chalk.gray(
-        `System Health: ${m.systemHealth}% | Error Rate: ${m.errorRatePercent}% | Budget: $${m.budgetRemaining} | Customer Sat: ${m.customerSatisfaction}%`
+        `Saúde do Sistema: ${m.systemHealth}% | Taxa de Erros: ${m.errorRatePercent}% | Orçamento: $${m.budgetRemaining} | Satisfação: ${m.customerSatisfaction}%`
       )
     );
 
     if (turnResult.isResolved) {
-      console.log(chalk.bold.green('\n🏆 SIMULATION SUCCESS: Incident resolved within SLA!'));
+      console.log(chalk.bold.green('\n🏆 SUCESSO DA SIMULAÇÃO: Incidente mitigado dentro do SLA!'));
     } else if (turnResult.isFailed) {
-      console.log(chalk.bold.red('\n💀 SIMULATION FAILURE: Mission failed to avert collapse!'));
+      console.log(
+        chalk.bold.red('\n💀 FALHA NA SIMULAÇÃO: Missão falhou em evitar o colapso operacional!')
+      );
     }
   }
 
   private static formatRiskLevel(level: string): string {
     switch (level) {
       case 'low':
-        return chalk.green.bold('LOW');
+        return chalk.green.bold('BAIXO');
       case 'medium':
-        return chalk.yellow.bold('MEDIUM');
+        return chalk.yellow.bold('MÉDIO');
       case 'high':
-        return chalk.hex('#FFA500').bold('HIGH');
+        return chalk.hex('#FFA500').bold('ALTO');
       case 'critical':
-        return chalk.red.bold('CRITICAL');
+        return chalk.red.bold('CRÍTICO');
       default:
         return chalk.white(level);
     }

@@ -44,69 +44,72 @@ export class IncidentManagementEnvironment {
   }
 
   /**
-   * Generates the dynamic scenario for the current turn based on environmental state.
+   * Generates the dynamic scenario for the current turn based on environmental state in Portuguese.
    */
   public getCurrentScenario(): Scenario {
     const actions: Action[] = [
       {
         id: 'scale_horizontal_and_cache',
-        title: 'Scale Web Nodes & Warm Edge Cache',
-        description: 'Provision 10 additional application workers and cache hot endpoints.',
+        title: 'Escalar Nós Web Horizontalmente e Aquecer Cache de Borda',
+        description: 'Provisionar 10 workers de aplicação adicionais e cachear endpoints quentes.',
         cost: 1200,
         risk: 'low',
-        expectedImpact: 'Reduces error rate by 10-15%, consumes $1,200 budget.'
+        expectedImpact: 'Reduz taxa de erros em 10-15%, consome $1.200 do orçamento operacional.'
       },
       {
         id: 'circuit_breaker_non_critical',
-        title: 'Activate Circuit Breakers on Non-Critical APIs',
+        title: 'Ativar Circuit Breakers em APIs Não Críticas',
         description:
-          'Drop telemetry, search recommendations, and analytics endpoints to protect database.',
+          'Descartar telemetria, recomendações e relatórios secundários para blindar o banco de dados.',
         cost: 200,
         risk: 'low',
-        expectedImpact: 'Immediate relief to database I/O, small customer satisfaction dip.'
+        expectedImpact:
+          'Alívio imediato no I/O do banco de dados, leve queda na satisfação do usuário.'
       },
       {
         id: 'failover_database_cluster',
-        title: 'Promote Read Replica to Primary Database',
-        description: 'Initiate failover to healthy standby database.',
+        title: 'Promover Réplica de Leitura a Banco Primário',
+        description: 'Iniciar failover controlado para banco em standby.',
         cost: 800,
         risk: 'medium',
-        expectedImpact: 'Resolves database saturation if lag is low; risky if lag is high.'
+        expectedImpact:
+          'Elimina gargalo de banco se o atraso for baixo; arriscado se a réplica estiver sobrecarregada.'
       },
       {
         id: 'hard_reboot_all_nodes',
-        title: 'Aggressive Cold Reboot of Core Cluster',
-        description: 'Force reboot all cluster nodes simultaneously.',
+        title: 'Reboot a Frio Simultâneo em Todos os Nós',
+        description: 'Reiniciar forçadamente todos os servidores do cluster ao mesmo tempo.',
         cost: 500,
         risk: 'critical',
-        expectedImpact: 'Causes 100% immediate drop in health and drops in-flight checkouts.'
+        expectedImpact: 'Queda imediata para 0% de saúde e perda de transações em andamento.'
       }
     ];
 
     return {
       id: `dynamic_incident_turn_${this.turn + 1}`,
-      title: `Production Crisis - Phase ${this.turn + 1} of ${this.maxTurns}`,
-      category: 'incident_response',
-      description: 'Dynamic multi-turn incident recovery simulation.',
-      context: `Turn ${this.turn + 1}/${this.maxTurns}: Current system health is ${this.systemHealth}%, checkout error rate is ${this.errorRatePercent}%, remaining operational budget is $${this.budgetRemaining}. Event log: ${this.eventLog.slice(-2).join(' | ') || 'System under active degradation.'}`,
+      title: `Crise em Produção - Fase ${this.turn + 1} de ${this.maxTurns}`,
+      category: 'resposta_a_incidentes',
+      description: 'Simulação dinâmica multi-turno de mitigação de incidentes.',
+      context: `Turno ${this.turn + 1}/${this.maxTurns}: Saúde atual do sistema é ${this.systemHealth}%, taxa de erros no checkout é ${this.errorRatePercent}%, orçamento operacional restante é $${this.budgetRemaining}. Log de eventos: ${this.eventLog.slice(-2).join(' | ') || 'Sistema sob degradação ativa.'}`,
       stateVariables: {
-        current_turn: this.turn + 1,
-        max_turns: this.maxTurns,
-        system_health_pct: this.systemHealth,
-        error_rate_pct: this.errorRatePercent,
-        budget_remaining: this.budgetRemaining,
-        customer_satisfaction_pct: this.customerSatisfaction
+        turno_atual: this.turn + 1,
+        max_turnos: this.maxTurns,
+        saude_sistema_pct: this.systemHealth,
+        taxa_erros_pct: this.errorRatePercent,
+        orcamento_restante: this.budgetRemaining,
+        satisfacao_cliente_pct: this.customerSatisfaction
       },
       goals: [
         {
           id: 'g_stabilize',
-          description: 'Bring system health above 85% and error rate below 3%.',
+          description:
+            'Elevar a saúde do sistema acima de 85% e reduzir a taxa de erros para menos de 3%.',
           priority: 'primary',
           weight: 1.0
         },
         {
           id: 'g_budget',
-          description: 'Keep remaining budget above $2,000.',
+          description: 'Manter o orçamento restante acima de $2.000.',
           priority: 'secondary',
           weight: 0.6
         }
@@ -115,7 +118,7 @@ export class IncidentManagementEnvironment {
         {
           id: 'c_avoid_total_crash',
           description:
-            'Avoid total outage caused by uncoordinated simultaneous cluster cold restarts.',
+            'Evitar apagão total causado por reinicializações a frio descoordenadas e simultâneas do cluster.',
           isHardConstraint: true,
           forbiddenActionIds: ['hard_reboot_all_nodes']
         }
@@ -125,7 +128,7 @@ export class IncidentManagementEnvironment {
         this.errorRatePercent > 18 ? 'circuit_breaker_non_critical' : 'scale_horizontal_and_cache',
       acceptableAlternativeIds: ['scale_horizontal_and_cache', 'failover_database_cluster'],
       forbiddenActionIds: ['hard_reboot_all_nodes'],
-      tags: ['interactive', 'multi-turn', 'sre']
+      tags: ['interativo', 'multi-turno', 'sre']
     };
   }
 
@@ -145,7 +148,7 @@ export class IncidentManagementEnvironment {
         this.budgetRemaining -= 200;
         this.customerSatisfaction -= 3;
         outcomeMessage =
-          'Circuit breaker effectively shielded primary DB. Traffic pressure relieved dramatically.';
+          'O Circuit Breaker blindou com sucesso o banco primário. A pressão de tráfego reduziu drasticamente.';
         break;
 
       case 'scale_horizontal_and_cache':
@@ -154,7 +157,7 @@ export class IncidentManagementEnvironment {
         this.budgetRemaining -= 1200;
         this.customerSatisfaction += 8;
         outcomeMessage =
-          'Horizontal nodes absorbed customer queries and edge cache stopped thundering herds.';
+          'Os novos nós web absorveram as requisições dos clientes e o cache de borda conteve a sobrecarga.';
         break;
 
       case 'failover_database_cluster':
@@ -162,12 +165,14 @@ export class IncidentManagementEnvironment {
           this.systemHealth = Math.min(100, this.systemHealth + 30);
           this.errorRatePercent = Math.max(0.5, this.errorRatePercent - 18);
           this.budgetRemaining -= 800;
-          outcomeMessage = 'Database failover succeeded cleanly with near-zero replica lag!';
+          outcomeMessage =
+            'O failover do banco de dados foi concluído com sucesso e atraso quase nulo!';
         } else {
           this.systemHealth -= 10;
           this.errorRatePercent += 5;
           this.budgetRemaining -= 800;
-          outcomeMessage = 'Replica promotion stumbled due to high existing system stress.';
+          outcomeMessage =
+            'A promoção da réplica falhou devido à sobrecarga prévia severa do sistema.';
         }
         break;
 
@@ -177,27 +182,28 @@ export class IncidentManagementEnvironment {
         this.budgetRemaining -= 500;
         this.customerSatisfaction = 5;
         this.isFailed = true;
-        outcomeMessage = 'CATASTROPHIC FAILURE: Cold reboot corrupted in-flight database sessions!';
+        outcomeMessage =
+          'FALHA CATASTRÓFICA: O reboot a frio corrompeu sessões ativas de banco de dados!';
         break;
 
       default:
         this.systemHealth -= 15;
         this.errorRatePercent += 8;
-        outcomeMessage = `Unrecognized or ineffective action "${action}". System continued to degrade.`;
+        outcomeMessage = `Ação não reconhecida ou ineficaz "${action}". O sistema continuou se degradando.`;
     }
 
-    this.eventLog.push(`Turn ${this.turn}: Action [${action}] -> ${outcomeMessage}`);
+    this.eventLog.push(`Turno ${this.turn}: Ação [${action}] -> ${outcomeMessage}`);
 
-    // Check resolution
+    // Verificação de resolução
     if (this.systemHealth >= 85 && this.errorRatePercent <= 3) {
       this.isResolved = true;
-      outcomeMessage += ' 🎉 Crisis successfully resolved! Normal operations restored.';
+      outcomeMessage += ' 🎉 Crise resolvida com sucesso! Operação normal restabelecida.';
     } else if (this.turn >= this.maxTurns) {
       this.isFailed = true;
-      outcomeMessage += ' ❌ Out of turns! Incident exceeded SLA time limits.';
+      outcomeMessage += ' ❌ Limite de turnos esgotado! O incidente violou o SLA de recuperação.';
     } else if (this.budgetRemaining <= 0) {
       this.isFailed = true;
-      outcomeMessage += ' ❌ Budget exhausted before system could be recovered.';
+      outcomeMessage += ' ❌ Orçamento operacional esgotado antes da recuperação do sistema.';
     }
 
     return {

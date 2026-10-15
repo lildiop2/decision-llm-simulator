@@ -18,10 +18,10 @@ export class FileReporter {
     const jsonPath = path.join(this.reportsDir, `benchmark-${timestamp}.json`);
     const mdPath = path.join(this.reportsDir, `benchmark-${timestamp}.md`);
 
-    // Save JSON
+    // Salvar JSON
     await fs.writeFile(jsonPath, JSON.stringify(report, null, 2), 'utf-8');
 
-    // Generate and save Markdown
+    // Gerar e salvar Markdown
     const markdown = this.generateMarkdown(report);
     await fs.writeFile(mdPath, markdown, 'utf-8');
 
@@ -40,15 +40,15 @@ export class FileReporter {
   private generateMarkdown(report: BenchmarkReport): string {
     const lines: string[] = [];
 
-    lines.push(`# 🧠 Decision LLM Simulator Benchmark Report`);
-    lines.push(`**Generated At:** ${report.generatedAt}`);
-    lines.push(`**Total Simulation Runs:** ${report.totalRuns}`);
-    lines.push(`**Models Tested:** ${report.modelsTested.join(', ')}`);
+    lines.push(`# 🧠 Relatório de Benchmark - Simulador de Decisão LLM`);
+    lines.push(`**Gerado em:** ${report.generatedAt}`);
+    lines.push(`**Total de Simulações:** ${report.totalRuns}`);
+    lines.push(`**Modelos Testados:** ${report.modelsTested.join(', ')}`);
     lines.push('');
-    lines.push('## Model Performance Summary');
+    lines.push('## Resumo de Desempenho por Modelo');
     lines.push('');
     lines.push(
-      '| Model | Runs | Schema Valid % | Constraint Compliance % | Optimal Action % | Avg Score | Avg Latency |'
+      '| Modelo | Execuções | Schema Válido % | Restrições Cumpridas % | Ação Ótima % | Score Médio | Latência Média |'
     );
     lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: |');
 
@@ -59,29 +59,29 @@ export class FileReporter {
     }
 
     lines.push('');
-    lines.push('## Detailed Scenario Executions');
+    lines.push('## Execuções Detalhadas dos Cenários');
     lines.push('');
 
     for (const r of report.results) {
-      lines.push(`### Scenario: ${r.scenarioTitle} (\`${r.scenarioId}\`)`);
-      lines.push(`- **Model:** \`${r.model}\``);
-      lines.push(`- **Latency:** ${r.evaluation.latencyMs}ms`);
-      lines.push(`- **Total Score:** ${r.evaluation.totalScore}/100`);
+      lines.push(`### Cenário: ${r.scenarioTitle} (\`${r.scenarioId}\`)`);
+      lines.push(`- **Modelo:** \`${r.model}\``);
+      lines.push(`- **Latência:** ${r.evaluation.latencyMs}ms`);
+      lines.push(`- **Score Total:** ${r.evaluation.totalScore}/100`);
       lines.push(
-        `- **Passed Hard Constraints:** ${r.evaluation.passedHardConstraints ? '✅ Yes' : '❌ NO'}`
+        `- **Respeitou Restrições Rígidas:** ${r.evaluation.passedHardConstraints ? '✅ Sim' : '❌ NÃO'}`
       );
-      lines.push(`- **Optimal Action Selected:** ${r.evaluation.isOptimal ? '✅ Yes' : '⚠️ No'}`);
+      lines.push(`- **Ação Ótima Selecionada:** ${r.evaluation.isOptimal ? '✅ Sim' : '⚠️ Não'}`);
 
       if (r.decision) {
-        lines.push(`- **Selected Action:** \`${r.decision.selectedAction}\``);
-        lines.push(`- **Confidence:** ${(r.decision.confidence * 100).toFixed(1)}%`);
-        lines.push(`- **Risk Level:** \`${r.decision.riskLevel}\``);
-        lines.push(`- **Reasoning:** ${r.decision.thoughtProcess}`);
-        lines.push(`- **Contingency Plan:** ${r.decision.contingencyPlan}`);
+        lines.push(`- **Ação Escolhida:** \`${r.decision.selectedAction}\``);
+        lines.push(`- **Confiança:** ${(r.decision.confidence * 100).toFixed(1)}%`);
+        lines.push(`- **Nível de Risco:** \`${r.decision.riskLevel}\``);
+        lines.push(`- **Linha de Raciocínio:** ${r.decision.thoughtProcess}`);
+        lines.push(`- **Plano de Contingência:** ${r.decision.contingencyPlan || 'Nenhum'}`);
       }
 
       lines.push('');
-      lines.push('#### Evaluation Feedback:');
+      lines.push('#### Feedbacks da Avaliação:');
       for (const f of r.evaluation.feedback) {
         lines.push(`- ${f}`);
       }

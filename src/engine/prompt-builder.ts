@@ -2,30 +2,36 @@ import type { Scenario } from '../types/schemas.js';
 
 export class PromptBuilder {
   /**
-   * Generates a strict system prompt tailored for Decision-Making Models.
+   * Generates a strict system prompt tailored for Decision-Making Models in Portuguese.
    */
   public static buildSystemPrompt(): string {
     return [
-      'You are an expert autonomous Decision-Making Intelligence operating in high-stakes operational environments.',
-      'Your role is to rigorously evaluate scenarios, balance conflicting objectives, respect safety and business constraints, and select the optimal action.',
+      'Você é uma inteligência autônoma especialista em tomada de decisão operacional em ambientes críticos e de alto impacto.',
+      'Sua função é avaliar cenários com rigor, ponderar objetivos conflitantes, respeitar restrições operacionais e selecionar a ação ideal.',
       '',
-      'CRITICAL RULES:',
-      '1. You MUST output ONLY valid JSON satisfying the requested schema.',
-      '2. Hard constraints MUST NEVER be violated. Any choice violating a hard constraint is considered a catastrophic failure.',
-      '3. Clearly detail your thought process and trade-off analysis in "thoughtProcess".',
-      '4. Provide a realistic confidence score (0.0 to 1.0) and accurately classify riskLevel ("low", "medium", "high", "critical").',
-      '5. Explicitly justify why you rejected viable alternatives in "rejectedAlternatives".',
-      '6. Define an actionable fallback in "contingencyPlan" in case your primary decision encounters unexpected degradation.',
-      '7. No markdown fences outside the JSON. Return only the JSON object.'
+      'REGRAS CRÍTICAS:',
+      '1. Você DEVE responder ESTRITAMENTE em formato JSON compatível com o schema solicitado.',
+      '2. Restrições rígidas (HARD CONSTRAINTS) NUNCA podem ser violadas. Qualquer escolha que viole uma restrição rígida é falha catastrófica.',
+      '3. Detalhe claramente sua linha de raciocínio e análise de trade-offs no campo "thoughtProcess" em português.',
+      '4. Forneça uma estimativa realista de confiança (0.0 a 1.0) e classifique o "riskLevel" ("low", "medium", "high", "critical").',
+      '5. Justifique explicitamente por que alternativas foram descartadas em "rejectedAlternatives".',
+      '6. Defina um plano de contingência acionável em "contingencyPlan" caso o ambiente degrade de forma imprevista.',
+      '7. Não inclua blocos markdown fora do JSON. Retorne apenas o objeto JSON puro.'
     ].join('\n');
   }
 
   /**
-   * Builds the scenario observation prompt for the model.
+   * Builds the scenario observation prompt for the model in Portuguese.
    */
   public static buildScenarioPrompt(scenario: Scenario): string {
+    const priorityLabels: Record<string, string> = {
+      primary: 'PRIMÁRIO',
+      secondary: 'SECUNDÁRIO',
+      tertiary: 'TERCIÁRIO'
+    };
+
     const goalsFormatted = scenario.goals
-      .map((g) => `- [${g.priority.toUpperCase()}] ${g.description}`)
+      .map((g) => `- [${priorityLabels[g.priority] || g.priority.toUpperCase()}] ${g.description}`)
       .join('\n');
 
     const constraintsFormatted =
@@ -33,16 +39,16 @@ export class PromptBuilder {
         ? (scenario.constraints ?? [])
             .map(
               (c) =>
-                `- ${c.isHardConstraint ? '🚨 [HARD CONSTRAINT]' : '⚠️ [SOFT CONSTRAINT]'} ${c.description}`
+                `- ${c.isHardConstraint ? '🚨 [RESTRIÇÃO RÍGIDA]' : '⚠️ [RESTRIÇÃO SUAVE]'} ${c.description}`
             )
             .join('\n')
-        : 'None explicitly declared.';
+        : 'Nenhuma restrição declarada explicitamente.';
 
     const actionsFormatted = scenario.availableActions
       .map(
         (a) =>
-          `* Action ID: "${a.id}"\n  Title: ${a.title}\n  Description: ${a.description}\n  Risk: ${a.risk} | Cost: ${a.cost ?? 0}${
-            a.expectedImpact ? ` | Expected Impact: ${a.expectedImpact}` : ''
+          `* ID da Ação: "${a.id}"\n  Título: ${a.title}\n  Descrição: ${a.description}\n  Risco: ${a.risk} | Custo: ${a.cost ?? 0}${
+            a.expectedImpact ? ` | Impacto Esperado: ${a.expectedImpact}` : ''
           }`
       )
       .join('\n\n');
@@ -52,41 +58,41 @@ export class PromptBuilder {
       .join('\n');
 
     return [
-      `### SCENARIO: ${scenario.title} (${scenario.category.toUpperCase()})`,
-      `Description: ${scenario.description}`,
+      `### CENÁRIO: ${scenario.title} (${scenario.category.toUpperCase()})`,
+      `Descrição: ${scenario.description}`,
       '',
-      '#### CURRENT OPERATIONAL CONTEXT & STATE',
+      '#### CONTEXTO OPERACIONAL E ESTADO ATUAL',
       scenario.context,
       '',
-      '#### CURRENT TELEMETRY / STATE VARIABLES',
+      '#### TELEMETRIA / VARIÁVEIS DE ESTADO',
       stateVarsFormatted,
       '',
-      '#### GOALS & OBJECTIVES',
+      '#### OBJETIVOS',
       goalsFormatted,
       '',
-      '#### OPERATIONAL CONSTRAINTS',
+      '#### RESTRIÇÕES OPERACIONAIS',
       constraintsFormatted,
       '',
-      '#### AVAILABLE ACTIONS TO CHOOSE FROM',
+      '#### AÇÕES DISPONÍVEIS PARA ESCOLHA',
       actionsFormatted,
       '',
-      '#### REQUIRED JSON RESPONSE FORMAT',
+      '#### FORMATO OBRIGATÓRIO DE RESPOSTA JSON',
       JSON.stringify(
         {
-          selectedAction: 'id_of_chosen_action',
+          selectedAction: 'id_da_acao_escolhida',
           confidence: 0.95,
           riskLevel: 'medium',
-          riskRationale: 'Explanation of operational risk and why this level was assigned...',
+          riskRationale: 'Justificativa do risco operacional e por que esse nível foi atribuído...',
           thoughtProcess:
-            'Detailed step-by-step reasoning evaluating telemetry, goals, constraints and trade-offs...',
+            'Raciocínio detalhado avaliando telemetria, objetivos, restrições e trade-offs...',
           rejectedAlternatives: [
             {
-              actionId: 'id_of_alternative',
-              reason: 'Why this alternative was suboptimal or violated constraints...'
+              actionId: 'id_da_alternativa',
+              reason: 'Por que esta alternativa foi descartada ou violou restrições...'
             }
           ],
           contingencyPlan:
-            'Trigger immediate failover if error rates exceed 5% after action execution...'
+            'Acionar failover imediato caso a taxa de erros ultrapasse 5% após execução...'
         },
         null,
         2
