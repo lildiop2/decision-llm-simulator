@@ -10,7 +10,11 @@ export class DecisionEvaluator {
     parseResult: ParseResult,
     latencyMs: number,
     promptTokens?: number,
-    completionTokens?: number
+    completionTokens?: number,
+    meta?: {
+      actionProbabilities?: Record<string, number>;
+      decisionModelType?: 'systemone' | 'generative';
+    }
   ): EvaluationResult {
     const feedback: string[] = [];
 
@@ -31,7 +35,9 @@ export class DecisionEvaluator {
         feedback: parseResult.errors,
         latencyMs,
         promptTokens,
-        completionTokens
+        completionTokens,
+        actionProbabilities: meta?.actionProbabilities,
+        decisionModelType: meta?.decisionModelType ?? 'generative'
       };
     }
 
@@ -124,10 +130,21 @@ export class DecisionEvaluator {
 
     // 6. Profundidade do Raciocínio
     let reasoningDepthScore = 30;
-    if (decision.thoughtProcess.length >= 80) reasoningDepthScore += 30;
-    if ((decision.rejectedAlternatives ?? []).length >= 1) reasoningDepthScore += 20;
-    if (decision.contingencyPlan && decision.contingencyPlan.length >= 20)
-      reasoningDepthScore += 20;
+    if (meta?.decisionModelType === 'systemone') {
+      // Para modelos nativos de decisão System One, o raciocínio é inferido probabilisticamente
+      reasoningDepthScore = 80;
+      if (meta.actionProbabilities && Object.keys(meta.actionProbabilities).length > 1) {
+        reasoningDepthScore += 10;
+      }
+      if (decision.contingencyPlan && decision.contingencyPlan.length >= 20) {
+        reasoningDepthScore += 10;
+      }
+    } else {
+      if (decision.thoughtProcess.length >= 80) reasoningDepthScore += 30;
+      if ((decision.rejectedAlternatives ?? []).length >= 1) reasoningDepthScore += 20;
+      if (decision.contingencyPlan && decision.contingencyPlan.length >= 20)
+        reasoningDepthScore += 20;
+    }
     reasoningDepthScore = Math.min(100, reasoningDepthScore);
 
     // 7. Cálculo do Score Composto Total
@@ -163,7 +180,9 @@ export class DecisionEvaluator {
       feedback,
       latencyMs,
       promptTokens,
-      completionTokens
+      completionTokens,
+      actionProbabilities: meta?.actionProbabilities,
+      decisionModelType: meta?.decisionModelType ?? 'generative'
     };
   }
 }

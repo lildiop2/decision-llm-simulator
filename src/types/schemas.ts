@@ -70,6 +70,65 @@ export const DecisionOutputSchema = z.object({
 });
 export type DecisionOutput = z.infer<typeof DecisionOutputSchema>;
 
+// System One Types (Ollama ?c=decision Models: tev1, kev, nimble, clef, etc.)
+export interface SystemOneQuestionChoice {
+  type: 'choice';
+  instructions: string;
+  criteria: Record<string, string | null>;
+}
+
+export interface SystemOneQuestionNoul {
+  type: 'noul';
+  instructions: string;
+  criteria?: { true?: string; false?: string };
+}
+
+export interface SystemOneQuestionScore {
+  type: 'score';
+  instructions: string;
+  criteria: string[];
+}
+
+export type SystemOneQuestion =
+  SystemOneQuestionChoice | SystemOneQuestionNoul | SystemOneQuestionScore;
+
+export interface SystemOneRequest {
+  model: string;
+  state: string | Record<string, unknown>;
+  questions: Record<string, SystemOneQuestion>;
+  keep_alive?: string;
+}
+
+export interface SystemOneAnswerChoice {
+  type: 'choice';
+  choice: string;
+  probabilities: Record<string, number>;
+  confidence: number;
+}
+
+export interface SystemOneAnswerNoul {
+  type: 'noul';
+  noul: number;
+}
+
+export interface SystemOneAnswerScore {
+  type: 'score';
+  score: number;
+  probabilities?: Record<string, number>;
+  confidence?: number;
+}
+
+export type SystemOneAnswer = SystemOneAnswerChoice | SystemOneAnswerNoul | SystemOneAnswerScore;
+
+export interface SystemOneResponse {
+  model: string;
+  answers: Record<string, SystemOneAnswer>;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+}
+
 export const EvaluationResultSchema = z.object({
   validJson: z.boolean(),
   validSchema: z.boolean(),
@@ -85,7 +144,9 @@ export const EvaluationResultSchema = z.object({
   feedback: z.array(z.string()),
   latencyMs: z.number().nonnegative(),
   promptTokens: z.number().optional(),
-  completionTokens: z.number().optional()
+  completionTokens: z.number().optional(),
+  actionProbabilities: z.record(z.number()).optional(),
+  decisionModelType: z.enum(['systemone', 'generative']).optional()
 });
 export type EvaluationResult = z.infer<typeof EvaluationResultSchema>;
 
@@ -113,7 +174,8 @@ export const BenchmarkReportSchema = z.object({
       hardConstraintPassRate: z.number(),
       optimalActionRate: z.number(),
       averageTotalScore: z.number(),
-      averageLatencyMs: z.number()
+      averageLatencyMs: z.number(),
+      modelType: z.enum(['systemone', 'generative']).optional()
     })
   )
 });

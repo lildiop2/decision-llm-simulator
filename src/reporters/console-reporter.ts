@@ -22,12 +22,44 @@ export class ConsoleReporter {
   public static printStepResult(result: SimulationStepResult): void {
     const { scenarioTitle, model, decision, evaluation } = result;
 
+    const modelTypeBadge =
+      evaluation.decisionModelType === 'systemone'
+        ? chalk.bgMagenta.white.bold(' 🧠 SYSTEM ONE (?c=decision) ')
+        : chalk.bgBlue.white(' GENERATIVE LLM ');
+
     console.log(chalk.bold.blue(`\n▶ Cenário: `) + chalk.white.bold(scenarioTitle));
     console.log(
       chalk.bold.gray(`  Modelo: `) +
         chalk.yellow(model) +
+        ' ' +
+        modelTypeBadge +
         chalk.gray(` | Latência: ${evaluation.latencyMs}ms`)
     );
+
+    if (evaluation.actionProbabilities && Object.keys(evaluation.actionProbabilities).length > 0) {
+      console.log(
+        chalk.bold('\n── [Distribuição Probabilística de Ações - System One] ──────────')
+      );
+      const entries = Object.entries(evaluation.actionProbabilities).sort((a, b) => b[1] - a[1]);
+      const maxActionLen = Math.max(...entries.map(([k]) => k.length), 10);
+      const barWidth = 24;
+
+      for (const [actionId, prob] of entries) {
+        const percentage = (prob * 100).toFixed(1);
+        const filled = Math.round(prob * barWidth);
+        const empty = Math.max(0, barWidth - filled);
+        const isChosen = actionId === decision?.selectedAction;
+
+        const bar = isChosen
+          ? chalk.green('█'.repeat(filled)) + chalk.gray('░'.repeat(empty))
+          : chalk.cyan('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
+
+        const label = actionId.padEnd(maxActionLen, ' ');
+        const tag = isChosen ? chalk.green.bold(' [ESCOLHIDA]') : '';
+
+        console.log(`  ${label} [${bar}] ${percentage.padStart(5, ' ')}%${tag}`);
+      }
+    }
 
     if (decision) {
       console.log(chalk.bold('\n── [Decisão do Modelo] ───────────────────────────────────'));
@@ -104,6 +136,7 @@ export class ConsoleReporter {
     const table = new Table({
       head: [
         chalk.cyan('Modelo'),
+        chalk.cyan('Tipo'),
         chalk.cyan('Execuções'),
         chalk.cyan('Schema %'),
         chalk.cyan('Restrições %'),
@@ -124,6 +157,9 @@ export class ConsoleReporter {
 
       table.push([
         chalk.yellow.bold(model),
+        summary.modelType === 'systemone'
+          ? chalk.magenta.bold('System One')
+          : chalk.blue('Generative'),
         summary.runsCount.toString(),
         `${summary.schemaPassRate}%`,
         summary.hardConstraintPassRate === 100

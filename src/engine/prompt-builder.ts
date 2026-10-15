@@ -1,8 +1,8 @@
-import type { Scenario } from '../types/schemas.js';
+import type { Scenario, SystemOneRequest } from '../types/schemas.js';
 
 export class PromptBuilder {
   /**
-   * Generates a strict system prompt tailored for Decision-Making Models in Portuguese.
+   * Generates a strict system prompt tailored for Generative LLMs in Portuguese.
    */
   public static buildSystemPrompt(): string {
     return [
@@ -21,7 +21,7 @@ export class PromptBuilder {
   }
 
   /**
-   * Builds the scenario observation prompt for the model in Portuguese.
+   * Builds the scenario observation prompt for Generative LLMs in Portuguese.
    */
   public static buildScenarioPrompt(scenario: Scenario): string {
     const priorityLabels: Record<string, string> = {
@@ -98,5 +98,65 @@ export class PromptBuilder {
         2
       )
     ].join('\n');
+  }
+
+  /**
+   * Constrói o payload para a API de Modelos de Decisão nativa (/v1/systemone) do Ollama.
+   */
+  public static buildSystemOneRequest(scenario: Scenario, model: string): SystemOneRequest {
+    const actionCriteria: Record<string, string> = {};
+    for (const a of scenario.availableActions) {
+      actionCriteria[a.id] = `${a.title}: ${a.description}${
+        a.expectedImpact ? ` (Impacto esperado: ${a.expectedImpact})` : ''
+      }`;
+    }
+
+    const statePayload = [
+      `CENÁRIO: ${scenario.title} (${scenario.category.toUpperCase()})`,
+      `Contexto: ${scenario.context}`,
+      `Telemetria: ${Object.entries(scenario.stateVariables)
+        .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+        .join(', ')}`,
+      `Objetivos: ${scenario.goals.map((g) => `[${g.priority.toUpperCase()}] ${g.description}`).join('; ')}`,
+      `Restrições: ${(scenario.constraints ?? [])
+        .map(
+          (c) =>
+            `${c.isHardConstraint ? '[RESTRIÇÃO RÍGIDA]' : '[RESTRIÇÃO SUAVE]'} ${c.description}`
+        )
+        .join('; ')}`
+    ].join('\n');
+
+    return {
+      model,
+      state: statePayload,
+      questions: {
+        selected_action: {
+          type: 'choice',
+          instructions:
+            'Com base na telemetria, objetivos e restrições de segurança fornecidos no estado, qual ação operacional deve ser executada?',
+          criteria: actionCriteria
+        },
+        risk_level: {
+          type: 'score',
+          instructions:
+            'Avalie a severidade do risco operacional do cenário de 0 (baixo) a 3 (crítico).',
+          criteria: [
+            'Risco baixo: operação normal e controlada',
+            'Risco médio: procedimento de manutenção com impacto moderado e reversível',
+            'Risco alto: degradação operacional grave com risco de violação de SLA',
+            'Risco crítico: falha catastrófica iminente, perda de dados ou violação de restrição rígida'
+          ]
+        },
+        respects_safety: {
+          type: 'noul',
+          instructions:
+            'A ação escolhida preserva a segurança operacional e cumpre as restrições rígidas?',
+          criteria: {
+            true: 'A escolha respeita integralmente as diretrizes de segurança.',
+            false: 'A escolha viola diretrizes rígidas de segurança operacional.'
+          }
+        }
+      }
+    };
   }
 }

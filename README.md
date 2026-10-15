@@ -6,6 +6,9 @@ Motor de simulação, avaliação e benchmarking para **Modelos de Linguagem Foc
 
 ## 🌟 Destaques do Projeto
 
+- **Suporte Nativo a Modelos de Decisão Ollama (`?c=decision`)**: Integração direta com a API nativa System One (`/v1/systemone`) do Ollama para modelos especializados em classificação de decisão (ex: `tev1:0.8b`, `tev1:4b`, `kev`, `nimble`, `clef`, etc.), permitindo inferência ultra-rápida (~200ms vs ~13s) com 0 tokens de geração dispersa.
+- **Distribuição Probabilística de Ações Calibrada**: Renderização em barras visuais no terminal da distribuição de probabilidade de cada ação candidata, confiança percentual e plano de contingência baseado na segunda melhor alternativa residual.
+- **Compatibilidade Dual (System One + LLMs Generativos)**: Roteamento inteligente que executa modelos de decisão via `/v1/systemone` ou LLMs generativos (`llama3.2`, `qwen`, `deepseek`) via `/api/generate` com Structured Outputs Zod.
 - **Contratos Estritos com Zod**: Validação robusta de saídas estruturadas contendo ação escolhida, justificativa de risco, processo de raciocínio passo a passo, estimativa de confiança, alternativas descartadas e plano de contingência.
 - **Parser Resiliente com Auto-Reparo**: Extração inteligente de blocos de pensamento `<think>...</think>`, markdown code fences e reparo automático de JSONs truncados por limite de tokens.
 - **Auditoria de Regras e Restrições**: Verificação automática de restrições rígidas (_hard constraints_) e suaves (_soft constraints_), aplicando penalidades a violações catastróficas e pontuando calibração de risco e otimalidade (0 a 100).
@@ -19,15 +22,17 @@ Motor de simulação, avaliação e benchmarking para **Modelos de Linguagem Foc
 
 ```mermaid
 flowchart TD
-    A["Registro de Cenários (src/scenarios/)"] --> B["Prompt Builder (src/engine/)"]
-    B --> C["Cliente Ollama HTTP REST"]
-    C --> D["Servidor Ollama Local (:11434)"]
-    D --> E["Saída Bruta do Modelo (JSON / Tags Think)"]
-    E --> F["Response Parser (Validação Zod & Auto-Reparo)"]
-    F --> G["Decision Evaluator (Auditoria de Regras)"]
+    A["Registro de Cenários (src/scenarios/)"] --> B{"Detector de Modelo (System One vs Generativo)"}
+    B -- "Modelo ?c=decision (tev1, kev, nimble)" --> C["Ollama System One API (/v1/systemone)"]
+    B -- "LLM Generativo (llama3.2, etc.)" --> D["Ollama Generate API com Zod (/api/generate)"]
+    C --> E["Distribuição de Probabilidades + Calibração"]
+    D --> F["Response Parser (Validação Zod & Auto-Reparo)"]
+    E --> G["Decision Evaluator (Auditoria de Regras)"]
+    F --> G
     G --> H["Score e Diagnósticos (0-100)"]
-    H --> I["Console Reporter / File Reporter (Markdown + JSON)"]
-    H --> J["Transição de Estado no Ambiente Multi-Turno"]
+    H --> I["Console Reporter (Barras de Probabilidade)"]
+    H --> J["File Reporter (Markdown + JSON)"]
+    H --> K["Transição de Estado no Ambiente Multi-Turno"]
 ```
 
 ---
@@ -37,7 +42,7 @@ flowchart TD
 - **Runtime**: Node.js >= 22.x (ESM nativo)
 - **Linguagem**: TypeScript 5.8
 - **Validação de Schemas**: Zod 3.24
-- **Engine de IA**: Ollama API local (`http://localhost:11434`)
+- **Engine de IA**: Ollama API local (`http://localhost:11434`) com endpoints `/v1/systemone` e `/api/generate`
 - **CLI & Visualização**: Commander.js + Chalk + Ora + Cli-Table3
 - **Test Runner**: Vitest (100% de aprovação)
 - **Padronização de Código**: ESLint (v9 flat config) + Prettier
@@ -54,10 +59,11 @@ Certifique-se de que o [Ollama](https://ollama.com) está em execução localmen
 # Verificar se o Ollama está ativo
 curl http://localhost:11434/api/tags
 
-# Baixar modelos recomendados (caso ainda não possua)
-ollama pull llama3.2:latest
-# ou modelo especializado em decisão:
+# Baixar modelo nativo de decisão (categoria ?c=decision)
 ollama pull tev1:0.8b
+
+# Opcional: baixar modelo generativo para comparação
+ollama pull llama3.2:latest
 ```
 
 ### 2. Instalação e Compilação
@@ -71,42 +77,39 @@ npm run build
 
 ### 3. Executando o Simulador
 
-#### Listar Modelos Instalados e Capacidades
+#### Listar Modelos Instalados e Detecção de Capacidade de Decisão
 
 ```bash
-npx tsx src/cli.ts list-models
-# ou via executável compilado:
+npm run sim -- list-models
+# ou
 node dist/cli.js list-models
 ```
 
 #### Listar Cenários Disponíveis
 
 ```bash
-node dist/cli.js list-scenarios
+npm run sim -- list-scenarios
 ```
 
-#### Executar Simulação de um Cenário
+#### Executar Simulação com Modelo de Decisão Nativo (tev1:0.8b)
 
 ```bash
-# Simular failover de banco de dados com llama3.2 e salvar relatório
-node dist/cli.js run incident_database_failover --model llama3.2:latest --save
-
-# Simular replanejamento de rota de drone sob tempestade
-node dist/cli.js run drone_route_replanning --model llama3.2:latest
+# Simula o cenário e exibe gráfico de barras da distribuição probabilística de ações
+npm run sim -- run incident_database_failover tev1:0.8b --save
 ```
 
 #### Executar Simulação de Ambiente Dinâmico Multi-Turno
 
 ```bash
-# O modelo enfrenta uma crise operacional durante 4 turnos interativos
-node dist/cli.js env --model llama3.2:latest
+# O modelo enfrenta uma crise operacional durante turnos interativos
+npm run sim -- env -m tev1:0.8b
 ```
 
-#### Executar Matriz de Benchmark Comparativo
+#### Executar Matriz de Benchmark Comparativo (System One vs LLM Generativo)
 
 ```bash
-# Compara desempenho entre modelos e gera relatórios em reports/
-node dist/cli.js benchmark --models "llama3.2:latest" --scenarios all
+# Compara o modelo de decisão rápido (tev1:0.8b) contra o LLM generativo (llama3.2)
+npm run sim -- benchmark tev1:0.8b,llama3.2:latest all
 ```
 
 ---

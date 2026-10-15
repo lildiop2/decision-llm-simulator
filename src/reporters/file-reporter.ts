@@ -48,13 +48,14 @@ export class FileReporter {
     lines.push('## Resumo de Desempenho por Modelo');
     lines.push('');
     lines.push(
-      '| Modelo | Execuções | Schema Válido % | Restrições Cumpridas % | Ação Ótima % | Score Médio | Latência Média |'
+      '| Modelo | Tipo | Execuções | Schema Válido % | Restrições Cumpridas % | Ação Ótima % | Score Médio | Latência Média |'
     );
-    lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: |');
+    lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |');
 
     for (const [model, s] of Object.entries(report.modelSummaries)) {
+      const typeLabel = s.modelType === 'systemone' ? 'System One (?c=decision)' : 'Generative';
       lines.push(
-        `| **${model}** | ${s.runsCount} | ${s.schemaPassRate}% | ${s.hardConstraintPassRate}% | ${s.optimalActionRate}% | **${s.averageTotalScore}/100** | ${s.averageLatencyMs}ms |`
+        `| **${model}** | ${typeLabel} | ${s.runsCount} | ${s.schemaPassRate}% | ${s.hardConstraintPassRate}% | ${s.optimalActionRate}% | **${s.averageTotalScore}/100** | ${s.averageLatencyMs}ms |`
       );
     }
 
@@ -63,14 +64,32 @@ export class FileReporter {
     lines.push('');
 
     for (const r of report.results) {
+      const typeLabel =
+        r.evaluation.decisionModelType === 'systemone'
+          ? 'System One (Nativo ?c=decision)'
+          : 'Generative LLM';
       lines.push(`### Cenário: ${r.scenarioTitle} (\`${r.scenarioId}\`)`);
-      lines.push(`- **Modelo:** \`${r.model}\``);
+      lines.push(`- **Modelo:** \`${r.model}\` (${typeLabel})`);
       lines.push(`- **Latência:** ${r.evaluation.latencyMs}ms`);
       lines.push(`- **Score Total:** ${r.evaluation.totalScore}/100`);
       lines.push(
         `- **Respeitou Restrições Rígidas:** ${r.evaluation.passedHardConstraints ? '✅ Sim' : '❌ NÃO'}`
       );
       lines.push(`- **Ação Ótima Selecionada:** ${r.evaluation.isOptimal ? '✅ Sim' : '⚠️ Não'}`);
+
+      if (r.evaluation.actionProbabilities) {
+        lines.push('');
+        lines.push('**Distribuição de Probabilidades (System One):**');
+        lines.push('| Ação | Probabilidade | Selecionada? |');
+        lines.push('| :--- | :---: | :---: |');
+        for (const [act, p] of Object.entries(r.evaluation.actionProbabilities).sort(
+          (a, b) => b[1] - a[1]
+        )) {
+          const isSel = act === r.decision?.selectedAction ? '✅ Sim' : 'Não';
+          lines.push(`| \`${act}\` | ${(p * 100).toFixed(2)}% | ${isSel} |`);
+        }
+        lines.push('');
+      }
 
       if (r.decision) {
         lines.push(`- **Ação Escolhida:** \`${r.decision.selectedAction}\``);

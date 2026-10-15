@@ -1,10 +1,18 @@
 import type { OllamaModelInfo, SimulationOptions } from '../types/index.js';
+import type { SystemOneRequest, SystemOneResponse } from '../types/schemas.js';
 
 export interface OllamaGenerateResponse {
   response: string;
   totalDurationMs: number;
   promptTokens?: number;
   completionTokens?: number;
+}
+
+export interface SystemOneExecuteResult {
+  response: SystemOneResponse;
+  totalDurationMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 export class OllamaClient {
@@ -19,7 +27,7 @@ export class OllamaClient {
   }
 
   /**
-   * Checks if Ollama API is reachable.
+   * Verifica se a API do Ollama está acessível.
    */
   public async isHealthy(): Promise<boolean> {
     try {
@@ -33,7 +41,7 @@ export class OllamaClient {
   }
 
   /**
-   * Fetches list of all locally available models in Ollama.
+   * Obtém a lista de todos os modelos disponíveis no Ollama local.
    */
   public async listModels(): Promise<OllamaModelInfo[]> {
     const res = await fetch(`${this.baseUrl}/api/tags`, {
@@ -41,7 +49,7 @@ export class OllamaClient {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to list Ollama models: HTTP ${res.status} ${res.statusText}`);
+      throw new Error(`Falha ao listar modelos do Ollama: HTTP ${res.status} ${res.statusText}`);
     }
 
     const data = (await res.json()) as { models?: OllamaModelInfo[] };
@@ -49,7 +57,29 @@ export class OllamaClient {
   }
 
   /**
-   * Requests a decision generation from Ollama.
+   * Verifica se um modelo específico é um modelo nativo de decisão (System One) do Ollama (?c=decision).
+   */
+  public async isSystemOneModel(modelName: string): Promise<boolean> {
+    const knownDecisionPrefixes = ['tev1', 'kev', 'nimble', 'clef', 'laya', 'strands-decider'];
+
+    if (knownDecisionPrefixes.some((p) => modelName.toLowerCase().startsWith(p))) {
+      return true;
+    }
+
+    try {
+      const models = await this.listModels();
+      const found = models.find((m) => m.name === modelName || m.model === modelName);
+      if (found && found.capabilities?.includes('decision')) {
+        return true;
+      }
+    } catch {
+      // Ignora erro de inspeção
+    }
+    return false;
+  }
+
+  /**
+   * Executa uma decisão com LLMs generativos tradicionais via /api/generate com Zod JSON.
    */
   public async generateDecision(
     prompt: string,
@@ -82,13 +112,13 @@ export class OllamaClient {
       });
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Ollama request failed (${options.model}): ${errorMsg}`);
+      throw new Error(`Requisição ao Ollama falhou (${options.model}): ${errorMsg}`);
     }
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
       throw new Error(
-        `Ollama returned error ${response.status} (${options.model}): ${errorBody || response.statusText}`
+        `Ollama retornou erro ${response.status} (${options.model}): ${errorBody || response.statusText}`
       );
     }
 
@@ -106,6 +136,46 @@ export class OllamaClient {
       totalDurationMs: Math.round(durationMs),
       promptTokens: data.prompt_eval_count,
       completionTokens: data.eval_count
+    };
+  }
+
+  /**
+   * Executa uma chamada nativa de modelo de decisão usando o endpoint /v1/systemone do Ollama (?c=decision).
+   */
+  public async executeSystemOne(
+    request: SystemOneRequest,
+    timeoutMs: number = 30000
+  ): Promise<SystemOneExecuteResult> {
+    const startTime = performance.now();
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/v1/systemone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(timeoutMs)
+      });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Chamada /v1/systemone falhou (${request.model}): ${errorMsg}`);
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(
+        `Ollama /v1/systemone retornou erro ${response.status} (${request.model}): ${errorBody || response.statusText}`
+      );
+    }
+
+    const data = (await response.json()) as SystemOneResponse;
+    const durationMs = Math.round(performance.now() - startTime);
+
+    return {
+      response: data,
+      totalDurationMs: durationMs,
+      inputTokens: data.usage?.input_tokens,
+      outputTokens: data.usage?.output_tokens
     };
   }
 }
