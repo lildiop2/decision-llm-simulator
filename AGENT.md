@@ -36,6 +36,7 @@ O desenvolvimento é 100% rastreável e orientado a cards. Isso assegura histór
 - Antes de criar a branch de trabalho ou modificar arquivos, verifique se a demanda já possui um card aberto.
 - Caso não exista, crie-o imediatamente via GitHub CLI (`gh issue create`) ou pela interface web do repositório.
 - Exemplo de comando via CLI:
+
 ```bash
 gh issue create \
   --title "[Feat] Simulador de Modelo de Decisão com Ollama e Zod" \
@@ -68,8 +69,8 @@ Todo card deve conter os seguintes tópicos obrigatórios:
 
 - **Linguagem Padrão**: TypeScript (ESM, Node.js >= 22.x)
 - **Convenção de Idiomas**:
-  - Código-fonte, variáveis, nomes de funções, classes, schemas, commits, issues e Pull Requests estritamente em **inglês**.
-  - Comunicação, chat e alinhamento com o dono em **português (pt-BR)**.
+  - **Idioma Oficial do Projeto**: **Português (pt-BR)** para documentação, cenários, CLI, prompts de decisão, feedbacks de auditoria, relatórios e comunicação geral.
+  - Identificadores técnicos de código (nomes de funções, interfaces e schemas Zod) mantêm compatibilidade TypeScript idiomática.
 - **Dependências**: Prefira bibliotecas padronizadas, ativamente mantidas e leves. Zero dependência supérflua sem justificativa expressa no card.
 
 ### Diretrizes Arquiteturais Preferidas pelo Dono
@@ -110,27 +111,34 @@ flowchart TD
 
 1. **Card/Issue Obrigatório**: Verifique ou crie o card formal no repositório antes de criar a branch (`gh issue create`). Anote o número `#<id>`.
 2. **Sincronização**:
+
 ```bash
 git checkout main && git pull origin main
 ```
+
 3. **Criação da Branch**:
+
 ```bash
 git checkout -b feature/<name-of-feature>
 # ou
 git checkout -b feat/#<issue-id>-<slug>
 ```
+
 4. **Desenvolvimento e Commits**: Commits atômicos com mensagens em inglês no modo imperativo (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`, `build:`).
 5. **Execução da Validação Real**: Execute os comandos exatos de validação local e garanta exit code 0.
 6. **Abertura do Pull Request**: Submeta o PR para a `main` contendo a descrição das alterações, a palavra-chave de encerramento (`Closes #<id>`) e o relatório dos testes com logs literais.
 7. **Revisão Obrigatória**: Revisão realizada por um agente com contexto limpo (perfil reviewer) ou pelo mantenedor humano. Auto-aprovação não é permitida.
 8. **Merge e Limpeza**:
-  - Merge realizado exclusivamente com **merge commit**.
-  - Remoção imediata da branch:
+
+- Merge realizado exclusivamente com **merge commit**.
+- Remoção imediata da branch:
+
 ```bash
 git checkout main && git pull origin main
 git branch -d <branch-name> && git push origin --delete <branch-name>
 ```
-  - Confirmação do fechamento automático da Issue.
+
+- Confirmação do fechamento automático da Issue.
 
 ---
 
