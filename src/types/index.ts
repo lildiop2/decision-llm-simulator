@@ -1,21 +1,28 @@
 export * from './schemas.js';
 
-export interface OllamaModelInfo {
+export interface LiteLlmModelInfo {
+  id: string;
   name: string;
-  model: string;
-  size: number;
-  digest: string;
+  endpoints: Array<'decision' | 'systemone'>;
+  capabilities?: string[];
+  owned_by?: string;
+  created?: number;
+  // Compatibilidade retroativa
+  model?: string;
+  size?: number;
+  digest?: string;
   details?: {
     family?: string;
     parameter_size?: string;
     quantization_level?: string;
   };
-  capabilities?: string[];
 }
 
 export interface SimulationOptions {
   model: string;
-  ollamaHost?: string;
+  litellmHost?: string;
+  apiKey?: string;
+  endpoint?: 'auto' | 'decision' | 'systemone';
   temperature?: number;
   topP?: number;
   maxTokens?: number;

@@ -1,4 +1,4 @@
-import { OllamaClient } from '../client/ollama-client.js';
+import { LiteLlmClient } from '../client/litellm-client.js';
 import { ResponseParser } from '../client/response-parser.js';
 import { PromptBuilder } from './prompt-builder.js';
 import { DecisionEvaluator } from './evaluator.js';
@@ -16,18 +16,18 @@ import type { SimulationOptions } from '../types/index.js';
 import type { EnvironmentTurnResult, IncidentManagementEnvironment } from './environment.js';
 
 export class DecisionSimulator {
-  private ollama: OllamaClient;
+  private litellm: LiteLlmClient;
 
-  constructor(client?: OllamaClient) {
-    this.ollama = client || new OllamaClient();
+  constructor(client?: LiteLlmClient) {
+    this.litellm = client || new LiteLlmClient();
   }
 
-  public getClient(): OllamaClient {
-    return this.ollama;
+  public getClient(): LiteLlmClient {
+    return this.litellm;
   }
 
   /**
-   * Converte a resposta estruturada de um modelo nativo de decisão (/v1/systemone) em um DecisionOutput.
+   * Converte a resposta estruturada de um modelo nativo de decisão (/systemone) em um DecisionOutput.
    */
   private convertSystemOneToDecision(
     scenario: Scenario,
@@ -100,17 +100,18 @@ export class DecisionSimulator {
   }
 
   /**
-   * Executes a single scenario simulation run for a given model.
+   * Executa a simulação de decisão de um cenário usando o LiteLLM Proxy.
+   * Roteia automaticamente ou explicitamente para /systemone ou /decision.
    */
   public async runScenario(
     scenario: Scenario,
     options: SimulationOptions
   ): Promise<SimulationStepResult> {
-    const isSystemOne = await this.ollama.isSystemOneModel(options.model);
+    const endpointType = this.litellm.resolveEndpointType(options.model, options.endpoint);
 
-    if (isSystemOne) {
+    if (endpointType === 'systemone') {
       const request = PromptBuilder.buildSystemOneRequest(scenario, options.model);
-      const executeResult = await this.ollama.executeSystemOne(request, options.timeoutMs);
+      const executeResult = await this.litellm.executeSystemOne(request, options.timeoutMs);
 
       const { decision, probabilities } = this.convertSystemOneToDecision(
         scenario,
@@ -146,10 +147,16 @@ export class DecisionSimulator {
       };
     }
 
+    // Caso padrão: endpoint /decision do LiteLLM Proxy
     const systemPrompt = PromptBuilder.buildSystemPrompt();
     const userPrompt = PromptBuilder.buildScenarioPrompt(scenario);
 
-    const generateResult = await this.ollama.generateDecision(userPrompt, systemPrompt, options);
+    const generateResult = await this.litellm.generateDecision(
+      userPrompt,
+      systemPrompt,
+      options,
+      scenario
+    );
 
     const parseResult = ResponseParser.parse(generateResult.response);
 
@@ -176,7 +183,7 @@ export class DecisionSimulator {
   }
 
   /**
-   * Runs a comparative benchmark matrix across multiple scenarios and models.
+   * Executa uma matriz de benchmark comparativa entre múltiplos cenários e modelos no LiteLLM Proxy.
    */
   public async runBenchmark(
     scenarios: Scenario[],
@@ -197,7 +204,9 @@ export class DecisionSimulator {
       for (const scenario of scenarios) {
         const stepResult = await this.runScenario(scenario, {
           model,
-          ollamaHost: baseOptions.ollamaHost,
+          litellmHost: baseOptions.litellmHost,
+          apiKey: baseOptions.apiKey,
+          endpoint: baseOptions.endpoint,
           temperature: baseOptions.temperature ?? 0.1,
           timeoutMs: baseOptions.timeoutMs ?? 60000,
           ...baseOptions
@@ -213,7 +222,7 @@ export class DecisionSimulator {
         totalLatency += stepResult.evaluation.latencyMs;
       }
 
-      const isSystemOne = await this.ollama.isSystemOneModel(model);
+      const endpointType = this.litellm.resolveEndpointType(model, baseOptions.endpoint);
       modelSummaries[model] = {
         runsCount: runCount,
         schemaPassRate: Math.round((schemaPasses / (runCount || 1)) * 100),
@@ -221,12 +230,12 @@ export class DecisionSimulator {
         optimalActionRate: Math.round((optimalChoices / (runCount || 1)) * 100),
         averageTotalScore: Math.round(totalScores / (runCount || 1)),
         averageLatencyMs: Math.round(totalLatency / (runCount || 1)),
-        modelType: isSystemOne ? 'systemone' : 'generative'
+        modelType: endpointType === 'systemone' ? 'systemone' : 'generative'
       };
     }
 
     return {
-      suiteTitle: 'Decision-Making LLM Benchmark',
+      suiteTitle: 'Decision-Making LLM Benchmark (LiteLLM Proxy)',
       generatedAt: new Date().toISOString(),
       modelsTested: models,
       totalRuns: results.length,
@@ -236,7 +245,7 @@ export class DecisionSimulator {
   }
 
   /**
-   * Executes a multi-turn dynamic environment simulation with the given model.
+   * Executa uma simulação dinâmica multi-turno de ambiente com o modelo selecionado.
    */
   public async runEnvironmentSimulation(
     env: IncidentManagementEnvironment,
@@ -251,7 +260,7 @@ export class DecisionSimulator {
 
       if (!stepResult.decision) {
         throw new Error(
-          `Model ${options.model} failed to produce a valid decision schema in turn ${env.getTurn() + 1}`
+          `O modelo ${options.model} falhou em gerar um schema de decisão válido no turno ${env.getTurn() + 1}`
         );
       }
 

@@ -1,7 +1,7 @@
 {
   "name": "decision-llm-simulator",
   "version": "1.0.0",
-  "description": "Simulation and benchmarking engine for Decision-Making LLMs using TypeScript, Zod, and Ollama",
+  "description": "Simulation and benchmarking engine for Decision-Making LLMs using LiteLLM Proxy (/decision & /systemone), TypeScript, Zod, Commander, Inquirer, and Chalk",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -18,12 +18,17 @@
     "start": "node dist/cli.js"
   },
   "keywords": [
-    "ollama",
+    "litellm",
+    "litellm-proxy",
     "decision-making",
+    "systemone",
     "llm",
     "simulator",
     "zod",
     "typescript",
+    "commander",
+    "inquirer",
+    "chalk",
     "benchmark"
   ],
   "author": "decision-llm-simulator contributors",
@@ -33,6 +38,7 @@
     "cli-table3": "^0.6.5",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
+    "inquirer": "^14.2.3",
     "ora": "^8.2.0",
     "zod": "^3.24.2"
   },

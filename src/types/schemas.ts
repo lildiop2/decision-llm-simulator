@@ -70,7 +70,7 @@ export const DecisionOutputSchema = z.object({
 });
 export type DecisionOutput = z.infer<typeof DecisionOutputSchema>;
 
-// System One Types (Ollama ?c=decision Models: tev1, kev, nimble, clef, etc.)
+// System One Types (LiteLLM Proxy /systemone Models: tev1, kev, nimble, clef, etc.)
 export interface SystemOneQuestionChoice {
   type: 'choice';
   instructions: string;

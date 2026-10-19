@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DecisionSimulator } from '../src/engine/simulator.js';
-import { OllamaClient } from '../src/client/ollama-client.js';
+import { LiteLlmClient } from '../src/client/litellm-client.js';
 import { incidentTriageScenario } from '../src/scenarios/incident-triage.js';
 
-describe('DecisionSimulator with mock OllamaClient', () => {
-  it('should run a scenario and produce a complete SimulationStepResult', async () => {
-    const mockClient = new OllamaClient('http://localhost:11434');
+describe('DecisionSimulator with mock LiteLlmClient', () => {
+  it('should run a scenario via /decision and produce a complete SimulationStepResult', async () => {
+    const mockClient = new LiteLlmClient('http://localhost:4000');
 
     vi.spyOn(mockClient, 'generateDecision').mockResolvedValue({
       response: JSON.stringify({
@@ -27,19 +27,20 @@ describe('DecisionSimulator with mock OllamaClient', () => {
 
     const simulator = new DecisionSimulator(mockClient);
     const result = await simulator.runScenario(incidentTriageScenario, {
-      model: 'test-model:latest'
+      model: 'gpt-4o-mini'
     });
 
     expect(result.scenarioId).toBe(incidentTriageScenario.id);
-    expect(result.model).toBe('test-model:latest');
+    expect(result.model).toBe('gpt-4o-mini');
     expect(result.decision?.selectedAction).toBe('throttle_writes_and_coordinated_failover');
     expect(result.evaluation.isOptimal).toBe(true);
     expect(result.evaluation.passedHardConstraints).toBe(true);
+    expect(result.evaluation.decisionModelType).toBe('generative');
     expect(result.evaluation.totalScore).toBeGreaterThanOrEqual(80);
   });
 
   it('should run benchmark across scenarios and aggregate model summary', async () => {
-    const mockClient = new OllamaClient('http://localhost:11434');
+    const mockClient = new LiteLlmClient('http://localhost:4000');
 
     vi.spyOn(mockClient, 'generateDecision').mockResolvedValue({
       response: JSON.stringify({
@@ -64,8 +65,8 @@ describe('DecisionSimulator with mock OllamaClient', () => {
     expect(report.modelSummaries['model-a'].averageTotalScore).toBeGreaterThan(0);
   });
 
-  it('should execute native System One decision model and map probabilities', async () => {
-    const mockClient = new OllamaClient('http://localhost:11434');
+  it('should execute native System One decision model via /systemone and map probabilities', async () => {
+    const mockClient = new LiteLlmClient('http://localhost:4000');
 
     vi.spyOn(mockClient, 'executeSystemOne').mockResolvedValue({
       response: {
@@ -119,5 +120,30 @@ describe('DecisionSimulator with mock OllamaClient', () => {
     expect(result.evaluation.passedHardConstraints).toBe(true);
     expect(result.decision?.rejectedAlternatives?.length).toBe(3);
     expect(result.decision?.contingencyPlan).toContain('drain_connections_and_graceful_switch');
+  });
+
+  it('should support explicit endpoint override to /decision even for systemone-named model', async () => {
+    const mockClient = new LiteLlmClient('http://localhost:4000');
+
+    const generateSpy = vi.spyOn(mockClient, 'generateDecision').mockResolvedValue({
+      response: JSON.stringify({
+        thoughtProcess: 'Forced decision route analysis.',
+        selectedAction: 'throttle_writes_and_coordinated_failover',
+        confidence: 0.88,
+        riskLevel: 'medium',
+        riskRationale: 'Tested.',
+        rejectedAlternatives: []
+      }),
+      totalDurationMs: 220
+    });
+
+    const simulator = new DecisionSimulator(mockClient);
+    const result = await simulator.runScenario(incidentTriageScenario, {
+      model: 'tev1:0.8b',
+      endpoint: 'decision'
+    });
+
+    expect(generateSpy).toHaveBeenCalledTimes(1);
+    expect(result.evaluation.decisionModelType).toBe('generative');
   });
 });
