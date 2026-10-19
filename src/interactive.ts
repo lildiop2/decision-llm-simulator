@@ -39,7 +39,7 @@ export async function runInteractiveCli(
   while (keepRunning) {
     const { action } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'select',
         name: 'action',
         message: 'O que você deseja executar?',
         choices: [
@@ -168,13 +168,13 @@ export async function runInteractiveCli(
 
       const runAnswers = await inquirer.prompt([
         {
-          type: 'list',
+          type: 'select',
           name: 'scenarioId',
           message: 'Selecione o cenário operacional:',
           choices: scenarioChoices
         },
         {
-          type: 'list',
+          type: 'select',
           name: 'modelSelection',
           message: 'Selecione o modelo do LiteLLM Proxy:',
           choices: modelChoices
@@ -188,7 +188,7 @@ export async function runInteractiveCli(
             val && val.trim().length > 0 ? true : 'Identificador de modelo é obrigatório'
         },
         {
-          type: 'list',
+          type: 'select',
           name: 'endpoint',
           message: 'Qual endpoint do LiteLLM Proxy deve processar a decisão?',
           choices: [
@@ -279,7 +279,7 @@ export async function runInteractiveCli(
           validate: (ans) => (ans.trim().length > 0 ? true : 'Informe pelo menos um modelo')
         },
         {
-          type: 'list',
+          type: 'select',
           name: 'endpoint',
           message: 'Roteamento de endpoint:',
           choices: [
@@ -342,7 +342,7 @@ export async function runInteractiveCli(
           default: 'decision-model'
         },
         {
-          type: 'list',
+          type: 'select',
           name: 'endpoint',
           message: 'Endpoint a utilizar:',
           choices: [

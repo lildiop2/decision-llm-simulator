@@ -18,9 +18,6 @@ export interface LiteLlmModelInfo {
   };
 }
 
-// Alias para compatibilidade com código existente
-export type OllamaModelInfo = LiteLlmModelInfo;
-
 export interface SimulationOptions {
   model: string;
   litellmHost?: string;
@@ -31,8 +28,6 @@ export interface SimulationOptions {
   maxTokens?: number;
   timeoutMs?: number;
   verbose?: boolean;
-  // Alias de legado
-  ollamaHost?: string;
 }
 
 export interface EnvironmentState {

@@ -14,14 +14,11 @@ import { runInteractiveCli } from './interactive.js';
 dotenv.config();
 
 const DEFAULT_LITELLM_HOST =
-  process.env.LITELLM_HOST ||
-  process.env.LITELLM_BASE_URL ||
-  process.env.OLLAMA_HOST ||
-  'http://localhost:4000';
+  process.env.LITELLM_HOST || process.env.LITELLM_BASE_URL || 'http://localhost:4000';
 
 const DEFAULT_LITELLM_KEY = process.env.LITELLM_API_KEY || '';
 
-const DEFAULT_MODEL = process.env.LITELLM_MODEL || process.env.OLLAMA_MODEL || 'decision-model';
+const DEFAULT_MODEL = process.env.LITELLM_MODEL || 'decision-model';
 
 const program = new Command();
 

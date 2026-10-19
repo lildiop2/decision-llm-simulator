@@ -101,7 +101,7 @@ export class PromptBuilder {
   }
 
   /**
-   * Constrói o payload para a API de Modelos de Decisão nativa (/v1/systemone) do Ollama.
+   * Constrói o payload para o endpoint nativo System One (/systemone) do LiteLLM Proxy.
    */
   public static buildSystemOneRequest(scenario: Scenario, model: string): SystemOneRequest {
     const actionCriteria: Record<string, string> = {};

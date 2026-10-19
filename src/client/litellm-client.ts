@@ -23,7 +23,6 @@ export class LiteLlmClient {
   constructor(
     host: string = process.env.LITELLM_HOST ||
       process.env.LITELLM_BASE_URL ||
-      process.env.OLLAMA_HOST ||
       'http://localhost:4000',
     apiKey: string = process.env.LITELLM_API_KEY || ''
   ) {
