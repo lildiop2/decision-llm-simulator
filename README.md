@@ -1,20 +1,22 @@
 # 🧠 Simulador de Modelos de Decisão (Decision LLM Simulator)
 
-Motor de simulação, avaliação e benchmarking para **Modelos de Linguagem Focados em Tomada de Decisão** (ex: `tev1:0.8b`, `llama3.2`, `qwen3.5`, `deepseek-r1`) desenvolvido com **TypeScript**, **Zod** e **Ollama**.
+Motor de simulação, avaliação e benchmarking para **Modelos de Linguagem Focados em Tomada de Decisão** utilizando **LiteLLM Proxy** como provedor único e unificado de modelos, desenvolvido com **TypeScript**, **Zod**, **Commander**, **Inquirer** e **Chalk**.
 
 ---
 
 ## 🌟 Destaques do Projeto
 
-- **Suporte Nativo a Modelos de Decisão Ollama (`?c=decision`)**: Integração direta com a API nativa System One (`/v1/systemone`) do Ollama para modelos especializados em classificação de decisão (ex: `tev1:0.8b`, `tev1:4b`, `kev`, `nimble`, `clef`, etc.), permitindo inferência ultra-rápida (~200ms vs ~13s) com 0 tokens de geração dispersa.
-- **Distribuição Probabilística de Ações Calibrada**: Renderização em barras visuais no terminal da distribuição de probabilidade de cada ação candidata, confiança percentual e plano de contingência baseado na segunda melhor alternativa residual.
-- **Compatibilidade Dual (System One + LLMs Generativos)**: Roteamento inteligente que executa modelos de decisão via `/v1/systemone` ou LLMs generativos (`llama3.2`, `qwen`, `deepseek`) via `/api/generate` com Structured Outputs Zod.
+- **LiteLLM Proxy como Único Provedor de Modelos**: Centralização total de chamadas LLM e modelos de decisão através do gateway LiteLLM Proxy (`http://localhost:4000`), suportando balanceamento de carga, governança, autenticação e auditoria unificada.
+- **Roteamento Nativo Dual: `/decision` e `/systemone`**:
+  - **`/decision`**: Inferência estruturada para LLMs generativos (ex: `gpt-4o`, `claude-3-5-sonnet`, `llama-3.3`, `gemini-1.5-pro`) com validação de schemas estritos Zod.
+  - **`/systemone` (e `/sytemone`)**: Inferência ultrarrápida para modelos probabilísticos nativos de decisão (ex: `tev1:0.8b`, `tev1:4b`, `kev`, `nimble`), com cálculo calibrado de probabilidades e sem tokens descartáveis.
+- **Assistente Interativo Completo com Inquirer & Chalk**: Modo interativo (`decision-sim interactive` ou execução sem parâmetros) com menu guiado para seleção amigável de cenários, modelos do proxy, rotas de endpoint, ajuste de temperatura e execução em tempo real.
+- **Distribuição Probabilística de Ações Calibrada**: Renderização visual em barras no terminal das distribuições de probabilidade de cada ação candidata, confiança percentual e plano de contingência baseado na segunda melhor alternativa residual.
 - **Contratos Estritos com Zod**: Validação robusta de saídas estruturadas contendo ação escolhida, justificativa de risco, processo de raciocínio passo a passo, estimativa de confiança, alternativas descartadas e plano de contingência.
 - **Parser Resiliente com Auto-Reparo**: Extração inteligente de blocos de pensamento `<think>...</think>`, markdown code fences e reparo automático de JSONs truncados por limite de tokens.
 - **Auditoria de Regras e Restrições**: Verificação automática de restrições rígidas (_hard constraints_) e suaves (_soft constraints_), aplicando penalidades a violações catastróficas e pontuando calibração de risco e otimalidade (0 a 100).
 - **Ambiente Dinâmico Multi-Turno**: Simulação de resposta a incidentes (`IncidentManagementEnvironment`) onde as ações do modelo impactam diretamente a telemetria (saúde do cluster, erros de checkout, orçamento e satisfação) ao longo de turnos sucessivos.
-- **Benchmarking Comparativo entre Modelos**: Execução de matrizes de testes comparando modelos locais com geração de relatórios detalhados em Markdown e JSON salvos em `reports/`.
-- **CLI Interativa & SDK Modular**: Interface de linha de comando com tabelas, spinners e cores via Commander, Chalk e Ora, além de exportação modular como biblioteca TypeScript.
+- **Benchmarking Comparativo entre Modelos**: Execução de matrizes de testes comparando modelos com relatórios detalhados em Markdown e JSON salvos em `reports/`.
 
 ---
 
@@ -22,17 +24,19 @@ Motor de simulação, avaliação e benchmarking para **Modelos de Linguagem Foc
 
 ```mermaid
 flowchart TD
-    A["Registro de Cenários (src/scenarios/)"] --> B{"Detector de Modelo (System One vs Generativo)"}
-    B -- "Modelo ?c=decision (tev1, kev, nimble)" --> C["Ollama System One API (/v1/systemone)"]
-    B -- "LLM Generativo (llama3.2, etc.)" --> D["Ollama Generate API com Zod (/api/generate)"]
-    C --> E["Distribuição de Probabilidades + Calibração"]
-    D --> F["Response Parser (Validação Zod & Auto-Reparo)"]
-    E --> G["Decision Evaluator (Auditoria de Regras)"]
-    F --> G
-    G --> H["Score e Diagnósticos (0-100)"]
-    H --> I["Console Reporter (Barras de Probabilidade)"]
-    H --> J["File Reporter (Markdown + JSON)"]
-    H --> K["Transição de Estado no Ambiente Multi-Turno"]
+    A["CLI Commander & Inquirer Wizard"] --> B["Decision Simulator Engine"]
+    B --> C["LiteLLM Client (Único Provider)"]
+    C --> D{"Roteador de Endpoints LiteLLM Proxy"}
+    D -- "Endpoint /systemone (tev1, kev, etc.)" --> E["LiteLLM Proxy /systemone"]
+    D -- "Endpoint /decision (LLMs Generativos)" --> F["LiteLLM Proxy /decision"]
+    E --> G["Distribuição de Probabilidades + Calibração"]
+    F --> H["Response Parser (Validação Zod & Auto-Reparo)"]
+    G --> I["Decision Evaluator (Auditoria de Regras)"]
+    H --> I
+    I --> J["Score e Diagnósticos (0-100)"]
+    J --> K["Console Reporter (Barras Chalk)"]
+    J --> L["File Reporter (Markdown + JSON)"]
+    J --> M["Transição de Estado no Ambiente Multi-Turno"]
 ```
 
 ---
@@ -42,8 +46,8 @@ flowchart TD
 - **Runtime**: Node.js >= 22.x (ESM nativo)
 - **Linguagem**: TypeScript 5.8
 - **Validação de Schemas**: Zod 3.24
-- **Engine de IA**: Ollama API local (`http://localhost:11434`) com endpoints `/v1/systemone` e `/api/generate`
-- **CLI & Visualização**: Commander.js + Chalk + Ora + Cli-Table3
+- **Model Provider Único**: LiteLLM Proxy (`http://localhost:4000`) com endpoints `/decision` e `/systemone`
+- **CLI & Interatividade**: Commander.js + Inquirer.js + Chalk + Ora + Cli-Table3
 - **Test Runner**: Vitest (100% de aprovação)
 - **Padronização de Código**: ESLint (v9 flat config) + Prettier
 
@@ -51,19 +55,14 @@ flowchart TD
 
 ## 🚀 Guia de Início Rápido
 
-### 1. Pré-requisitos
+### 1. Configuração do LiteLLM Proxy
 
-Certifique-se de que o [Ollama](https://ollama.com) está em execução localmente e possui ao menos um modelo baixado:
+Certifique-se de que o LiteLLM Proxy está ativo (por padrão em `http://localhost:4000`). Você pode configurar as seguintes variáveis de ambiente no seu arquivo `.env`:
 
-```bash
-# Verificar se o Ollama está ativo
-curl http://localhost:11434/api/tags
-
-# Baixar modelo nativo de decisão (categoria ?c=decision)
-ollama pull tev1:0.8b
-
-# Opcional: baixar modelo generativo para comparação
-ollama pull llama3.2:latest
+```env
+LITELLM_HOST=http://localhost:4000
+LITELLM_API_KEY=sua-chave-opcional
+LITELLM_MODEL=decision-model
 ```
 
 ### 2. Instalação e Compilação
@@ -77,39 +76,51 @@ npm run build
 
 ### 3. Executando o Simulador
 
-#### Listar Modelos Instalados e Detecção de Capacidade de Decisão
+#### Modo Interativo Guiado (Inquirer + Chalk)
+
+Basta executar o comando sem argumentos ou com `interactive`:
+
+```bash
+npm run sim
+# ou
+npm run sim -- interactive
+```
+
+#### Listar Modelos Configurados no LiteLLM Proxy
 
 ```bash
 npm run sim -- list-models
-# ou
-node dist/cli.js list-models
 ```
 
-#### Listar Cenários Disponíveis
+#### Listar Cenários Operacionais Disponíveis
 
 ```bash
 npm run sim -- list-scenarios
 ```
 
-#### Executar Simulação com Modelo de Decisão Nativo (tev1:0.8b)
+#### Executar Simulação via Endpoint `/decision` ou `/systemone`
 
 ```bash
-# Simula o cenário e exibe gráfico de barras da distribuição probabilística de ações
-npm run sim -- run incident_database_failover tev1:0.8b --save
+# Execução padrão (detecção automática de endpoint por modelo)
+npm run sim -- run incident_database_failover gpt-4o-mini --save
+
+# Forçando o endpoint /systemone para modelos de decisão probabilísticos
+npm run sim -- run incident_database_failover tev1:0.8b -e systemone --save
+
+# Forçando o endpoint /decision para modelos generativos com structured output
+npm run sim -- run incident_database_failover decision-model -e decision --save
 ```
 
 #### Executar Simulação de Ambiente Dinâmico Multi-Turno
 
 ```bash
-# O modelo enfrenta uma crise operacional durante turnos interativos
-npm run sim -- env -m tev1:0.8b
+npm run sim -- env -m decision-model
 ```
 
-#### Executar Matriz de Benchmark Comparativo (System One vs LLM Generativo)
+#### Executar Matriz de Benchmark Comparativo
 
 ```bash
-# Compara o modelo de decisão rápido (tev1:0.8b) contra o LLM generativo (llama3.2)
-npm run sim -- benchmark tev1:0.8b,llama3.2:latest all
+npm run sim -- benchmark decision-model,tev1:0.8b all
 ```
 
 ---

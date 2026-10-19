@@ -40,7 +40,7 @@ export class FileReporter {
   private generateMarkdown(report: BenchmarkReport): string {
     const lines: string[] = [];
 
-    lines.push(`# 🧠 Relatório de Benchmark - Simulador de Decisão LLM`);
+    lines.push(`# 🧠 Relatório de Benchmark - Simulador de Decisão via LiteLLM Proxy`);
     lines.push(`**Gerado em:** ${report.generatedAt}`);
     lines.push(`**Total de Simulações:** ${report.totalRuns}`);
     lines.push(`**Modelos Testados:** ${report.modelsTested.join(', ')}`);
@@ -53,7 +53,8 @@ export class FileReporter {
     lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |');
 
     for (const [model, s] of Object.entries(report.modelSummaries)) {
-      const typeLabel = s.modelType === 'systemone' ? 'System One (?c=decision)' : 'Generative';
+      const typeLabel =
+        s.modelType === 'systemone' ? 'System One (/systemone)' : 'Generative (/decision)';
       lines.push(
         `| **${model}** | ${typeLabel} | ${s.runsCount} | ${s.schemaPassRate}% | ${s.hardConstraintPassRate}% | ${s.optimalActionRate}% | **${s.averageTotalScore}/100** | ${s.averageLatencyMs}ms |`
       );
@@ -66,8 +67,8 @@ export class FileReporter {
     for (const r of report.results) {
       const typeLabel =
         r.evaluation.decisionModelType === 'systemone'
-          ? 'System One (Nativo ?c=decision)'
-          : 'Generative LLM';
+          ? 'System One (/systemone)'
+          : 'Generative (/decision)';
       lines.push(`### Cenário: ${r.scenarioTitle} (\`${r.scenarioId}\`)`);
       lines.push(`- **Modelo:** \`${r.model}\` (${typeLabel})`);
       lines.push(`- **Latência:** ${r.evaluation.latencyMs}ms`);

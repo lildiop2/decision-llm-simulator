@@ -3,86 +3,105 @@ import { Command } from 'commander';
 import ora from 'ora';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { OllamaClient } from './client/ollama-client.js';
+import { LiteLlmClient } from './client/litellm-client.js';
 import { DecisionSimulator } from './engine/simulator.js';
 import { ConsoleReporter } from './reporters/console-reporter.js';
 import { FileReporter } from './reporters/file-reporter.js';
 import { getAllScenarios, getScenarioById } from './scenarios/index.js';
 import { IncidentManagementEnvironment } from './engine/environment.js';
+import { runInteractiveCli } from './interactive.js';
 
 dotenv.config();
+
+const DEFAULT_LITELLM_HOST =
+  process.env.LITELLM_HOST ||
+  process.env.LITELLM_BASE_URL ||
+  process.env.OLLAMA_HOST ||
+  'http://localhost:4000';
+
+const DEFAULT_LITELLM_KEY = process.env.LITELLM_API_KEY || '';
+
+const DEFAULT_MODEL = process.env.LITELLM_MODEL || process.env.OLLAMA_MODEL || 'decision-model';
 
 const program = new Command();
 
 program
   .name('decision-sim')
-  .description('Simulador e Avaliador de Modelos de Decisão com TypeScript, Zod e Ollama')
-  .version('1.0.0');
+  .description('Simulador e Avaliador de Modelos de Decisão usando LiteLLM Proxy, TypeScript e Zod')
+  .version('2.0.0')
+  .option('-i, --interactive', 'Executar em modo wizard interativo com Inquirer');
 
-// 1. Comando: list-models
+// 1. Comando: interactive / wizard
+program
+  .command('interactive')
+  .alias('wizard')
+  .description('Iniciar o assistente interativo guiado (Inquirer + Chalk) do simulador')
+  .option('-H, --host <url>', 'URL do LiteLLM Proxy', DEFAULT_LITELLM_HOST)
+  .option('-k, --key <token>', 'API Key do LiteLLM Proxy', DEFAULT_LITELLM_KEY)
+  .action(async (options) => {
+    await runInteractiveCli({ host: options.host, apiKey: options.key });
+  });
+
+// 2. Comando: list-models
 program
   .command('list-models')
-  .description('Listar todos os modelos Ollama locais disponíveis e suas capacidades')
-  .option(
-    '-H, --host <url>',
-    'URL do servidor Ollama',
-    process.env.OLLAMA_HOST || 'http://localhost:11434'
+  .description(
+    'Listar todos os modelos disponíveis no LiteLLM Proxy e seus endpoints (/decision, /systemone)'
   )
+  .option('-H, --host <url>', 'URL do LiteLLM Proxy', DEFAULT_LITELLM_HOST)
+  .option('-k, --key <token>', 'API Key do LiteLLM Proxy', DEFAULT_LITELLM_KEY)
   .action(async (options) => {
     ConsoleReporter.printHeader();
-    const client = new OllamaClient(options.host);
+    const client = new LiteLlmClient(options.host, options.key);
 
-    const spinner = ora('Verificando conexão com o Ollama...').start();
+    const spinner = ora(`Verificando conexão com o LiteLLM Proxy em ${options.host}...`).start();
     const isHealthy = await client.isHealthy();
 
     if (!isHealthy) {
       spinner.fail(
-        chalk.red(`Não foi possível conectar ao Ollama em ${options.host}. O serviço está ativo?`)
+        chalk.red(
+          `Não foi possível conectar ao LiteLLM Proxy em ${options.host}. O serviço está ativo?`
+        )
       );
       process.exit(1);
     }
 
-    spinner.text = 'Buscando modelos instalados...';
+    spinner.text = 'Buscando catálogo de modelos no LiteLLM Proxy...';
     try {
       const models = await client.listModels();
-      spinner.succeed(`Encontrado(s) ${models.length} modelo(s) no Ollama:\n`);
+      spinner.succeed(`Encontrado(s) ${models.length} modelo(s) no LiteLLM Proxy:\n`);
 
       for (const m of models) {
-        const isDecisionSpecialized =
-          m.capabilities?.includes('decision') || m.name.includes('tev1');
-        const badge = isDecisionSpecialized
-          ? chalk.bgMagenta.white.bold(' 🧠 MODELO DE DECISÃO ')
-          : chalk.bgBlue.white(' LLM GERAL ');
+        const supportsSystemOne = m.endpoints.includes('systemone');
+        const badgeDecision = chalk.bgBlue.white.bold(' /decision ');
+        const badgeSysOne = supportsSystemOne
+          ? chalk.bgMagenta.white.bold(' /systemone ')
+          : chalk.gray(' [apenas /decision] ');
 
-        const sizeGb = (m.size / (1024 * 1024 * 1024)).toFixed(2);
-        console.log(`• ${chalk.yellow.bold(m.name)}  ${badge}`);
-        console.log(
-          chalk.gray(
-            `  Tamanho: ${sizeGb} GB | Família: ${m.details?.family || 'N/A'} | Parâmetros: ${
-              m.details?.parameter_size || 'N/A'
-            } | Quantização: ${m.details?.quantization_level || 'N/A'}`
-          )
-        );
-        if (m.capabilities && m.capabilities.length > 0) {
-          console.log(chalk.gray(`  Capacidades: [${m.capabilities.join(', ')}]`));
+        console.log(`• ${chalk.yellow.bold(m.id)}  ${badgeDecision} ${badgeSysOne}`);
+        if (m.owned_by) {
+          console.log(chalk.gray(`  Provedor / Dono: ${m.owned_by}`));
         }
-        console.log('');
+        console.log(
+          chalk.gray(`  Capacidades mapeadas: [${m.capabilities?.join(', ') || 'decision'}]\n`)
+        );
       }
     } catch (err: unknown) {
       spinner.fail(`Erro ao listar modelos: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
     }
   });
 
-// 2. Comando: list-scenarios
+// 3. Comando: list-scenarios
 program
   .command('list-scenarios')
-  .description('Listar todos os cenários operacionais de decisão disponíveis')
+  .description('Listar todos os cenários operacionais de decisão integrados')
   .action(() => {
     ConsoleReporter.printHeader();
     const scenarios = getAllScenarios();
 
     console.log(
-      chalk.bold.cyan(`Encontrados ${scenarios.length} cenários de decisão integrados:\n`)
+      chalk.bold.cyan(`Encontrados ${scenarios.length} cenários operacionais de decisão:\n`)
     );
 
     for (const s of scenarios) {
@@ -97,46 +116,56 @@ program
     }
   });
 
-// 3. Comando: run
+// 4. Comando: run
 program
   .command('run [scenarioId] [model]')
-  .description('Executar simulação de decisão para um cenário específico')
-  .option('-m, --model <name>', 'Modelo Ollama a utilizar', process.env.OLLAMA_MODEL || 'tev1:0.8b')
+  .description('Executar simulação de decisão para um cenário específico via LiteLLM Proxy')
+  .option('-m, --model <name>', 'Modelo no LiteLLM Proxy a utilizar', DEFAULT_MODEL)
+  .option('-H, --host <url>', 'URL do LiteLLM Proxy', DEFAULT_LITELLM_HOST)
+  .option('-k, --key <token>', 'API Key do LiteLLM Proxy', DEFAULT_LITELLM_KEY)
   .option(
-    '-H, --host <url>',
-    'URL do servidor Ollama',
-    process.env.OLLAMA_HOST || 'http://localhost:11434'
+    '-e, --endpoint <type>',
+    'Endpoint do LiteLLM Proxy a utilizar ("auto", "decision", "systemone")',
+    'auto'
   )
   .option('-t, --temperature <number>', 'Temperatura de amostragem', '0.2')
   .option('-s, --save', 'Salvar relatório de execução no diretório reports/', false)
+  .option('-i, --interactive', 'Executar via wizard interativo', false)
   .action(async (scenarioId, modelArg, options) => {
+    if (options.interactive) {
+      await runInteractiveCli({ host: options.host, apiKey: options.key });
+      return;
+    }
+
     ConsoleReporter.printHeader();
 
     const targetId = scenarioId || 'incident_database_failover';
-    const targetModel = modelArg || options.model || process.env.OLLAMA_MODEL || 'tev1:0.8b';
+    const targetModel = modelArg || options.model || DEFAULT_MODEL;
     const scenario = getScenarioById(targetId);
 
     if (!scenario) {
       console.error(
         chalk.red(
-          `Erro: Cenário "${targetId}" não encontrado. Execute "decision-sim list-scenarios" para ver os cenários válidos.`
+          `Erro: Cenário "${targetId}" não encontrado. Execute "decision-sim list-scenarios" para consultar cenários válidos.`
         )
       );
       process.exit(1);
     }
 
-    const client = new OllamaClient(options.host);
+    const client = new LiteLlmClient(options.host, options.key);
     const simulator = new DecisionSimulator(client);
 
     const spinner = ora(
-      `Executando cenário "${scenario.title}" com o modelo "${targetModel}"...`
+      `Executando cenário "${scenario.title}" com o modelo "${targetModel}" via LiteLLM Proxy...`
     ).start();
 
     try {
       const result = await simulator.runScenario(scenario, {
         model: targetModel,
+        endpoint: options.endpoint,
         temperature: parseFloat(options.temperature),
-        ollamaHost: options.host
+        litellmHost: options.host,
+        apiKey: options.key
       });
 
       spinner.succeed(`Avaliação de decisão concluída em ${result.evaluation.latencyMs}ms!`);
@@ -154,26 +183,24 @@ program
     }
   });
 
-// 4. Comando: benchmark
+// 5. Comando: benchmark
 program
   .command('benchmark [models] [scenarios]')
   .description('Executar matriz comparativa de benchmark entre múltiplos modelos e cenários')
   .option(
     '-m, --models <names>',
-    'Lista de modelos Ollama separados por vírgula',
-    'tev1:0.8b,llama3.2:latest'
+    'Lista de modelos separados por vírgula',
+    'decision-model,tev1:0.8b'
   )
-  .option(
-    '-H, --host <url>',
-    'URL do servidor Ollama',
-    process.env.OLLAMA_HOST || 'http://localhost:11434'
-  )
+  .option('-H, --host <url>', 'URL do LiteLLM Proxy', DEFAULT_LITELLM_HOST)
+  .option('-k, --key <token>', 'API Key do LiteLLM Proxy', DEFAULT_LITELLM_KEY)
+  .option('-e, --endpoint <type>', 'Endpoint a forçar ("auto", "decision", "systemone")', 'auto')
   .option('-t, --temperature <number>', 'Temperatura de amostragem', '0.1')
   .option('-s, --scenarios <ids>', 'IDs dos cenários separados por vírgula (ou "all")', 'all')
   .action(async (modelsArg, scenariosArg, options) => {
     ConsoleReporter.printHeader();
 
-    const rawModels = modelsArg || options.models || 'tev1:0.8b,llama3.2:latest';
+    const rawModels = modelsArg || options.models || 'decision-model,tev1:0.8b';
     const rawScenarios = scenariosArg || options.scenarios || 'all';
 
     const modelsList = rawModels.split(',').map((m: string) => m.trim());
@@ -186,21 +213,23 @@ program
 
     console.log(
       chalk.cyan(
-        `Iniciando benchmark para ${modelsList.length} modelo(s) em ${scenariosToRun.length} cenário(s)...\n`
+        `Iniciando benchmark para ${modelsList.length} modelo(s) em ${scenariosToRun.length} cenário(s) via LiteLLM Proxy...\n`
       )
     );
 
-    const client = new OllamaClient(options.host);
+    const client = new LiteLlmClient(options.host, options.key);
     const simulator = new DecisionSimulator(client);
-    const spinner = ora('Executando matriz de benchmark...').start();
+    const spinner = ora('Executando matriz de benchmark no LiteLLM Proxy...').start();
 
     try {
       const report = await simulator.runBenchmark(scenariosToRun, modelsList, {
-        ollamaHost: options.host,
+        litellmHost: options.host,
+        apiKey: options.key,
+        endpoint: options.endpoint,
         temperature: parseFloat(options.temperature)
       });
 
-      spinner.succeed('Execução da matriz de benchmark finalizada!');
+      spinner.succeed('Execução da matriz de benchmark finalizada com sucesso!');
       ConsoleReporter.printBenchmarkReport(report);
 
       const fileReporter = new FileReporter();
@@ -214,16 +243,14 @@ program
     }
   });
 
-// 5. Comando: env
+// 6. Comando: env
 program
   .command('env')
   .description('Executar simulação interativa de ambiente multi-turno (Resposta a Incidentes)')
-  .option('-m, --model <name>', 'Modelo Ollama a utilizar', process.env.OLLAMA_MODEL || 'tev1:0.8b')
-  .option(
-    '-H, --host <url>',
-    'URL do servidor Ollama',
-    process.env.OLLAMA_HOST || 'http://localhost:11434'
-  )
+  .option('-m, --model <name>', 'Modelo no LiteLLM Proxy a utilizar', DEFAULT_MODEL)
+  .option('-H, --host <url>', 'URL do LiteLLM Proxy', DEFAULT_LITELLM_HOST)
+  .option('-k, --key <token>', 'API Key do LiteLLM Proxy', DEFAULT_LITELLM_KEY)
+  .option('-e, --endpoint <type>', 'Endpoint a forçar ("auto", "decision", "systemone")', 'auto')
   .option('-t, --temperature <number>', 'Temperatura de amostragem', '0.2')
   .action(async (options) => {
     ConsoleReporter.printHeader();
@@ -232,15 +259,15 @@ program
     );
     console.log(
       chalk.gray(
-        'O modelo deve analisar a telemetria em tempo real e estabilizar o sistema ao longo de 4 turnos.\n'
+        'O modelo deve analisar a telemetria em tempo real e estabilizar o sistema ao longo de até 4 turnos.\n'
       )
     );
 
-    const client = new OllamaClient(options.host);
+    const client = new LiteLlmClient(options.host, options.key);
     const simulator = new DecisionSimulator(client);
     const env = new IncidentManagementEnvironment(4);
 
-    const spinner = ora('Inicializando simulação de ambiente...').start();
+    const spinner = ora('Inicializando simulação de ambiente via LiteLLM Proxy...').start();
 
     try {
       spinner.stop();
@@ -248,8 +275,10 @@ program
         env,
         {
           model: options.model,
+          endpoint: options.endpoint,
           temperature: parseFloat(options.temperature),
-          ollamaHost: options.host
+          litellmHost: options.host,
+          apiKey: options.key
         },
         (turnResult) => {
           ConsoleReporter.printEnvironmentTurn(turnResult);
@@ -263,4 +292,16 @@ program
     }
   });
 
-program.parse(process.argv);
+// Se nenhum argumento for passado, executa o modo interativo guiado (Inquirer)
+if (process.argv.length <= 2) {
+  runInteractiveCli().catch((err: unknown) => {
+    console.error(
+      chalk.red(
+        `Erro no assistente interativo: ${err instanceof Error ? err.message : String(err)}`
+      )
+    );
+    process.exit(1);
+  });
+} else {
+  program.parse(process.argv);
+}

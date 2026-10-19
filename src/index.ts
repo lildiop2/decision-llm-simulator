@@ -1,5 +1,6 @@
 export * from './types/index.js';
 export * from './types/schemas.js';
+export * from './client/litellm-client.js';
 export * from './client/ollama-client.js';
 export * from './client/response-parser.js';
 export * from './engine/prompt-builder.js';
@@ -9,3 +10,4 @@ export * from './engine/simulator.js';
 export * from './scenarios/index.js';
 export * from './reporters/console-reporter.js';
 export * from './reporters/file-reporter.js';
+export * from './interactive.js';

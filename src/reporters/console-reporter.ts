@@ -9,10 +9,8 @@ export class ConsoleReporter {
    */
   public static printHeader(): void {
     console.log(chalk.bold.cyan('\n======================================================'));
-    console.log(
-      chalk.bold.magenta('       🧠 SIMULADOR DE MODELOS DE DECISÃO (TS + Zod + Ollama)')
-    );
-    console.log(chalk.gray('  Benchmarking de Decisões de Alto Impacto & Simulação de Ambientes'));
+    console.log(chalk.bold.magenta('       🧠 SIMULADOR DE MODELOS DE DECISÃO (LiteLLM Proxy)'));
+    console.log(chalk.gray('  Centralização via LiteLLM Proxy • Endpoints /decision & /systemone'));
     console.log(chalk.bold.cyan('======================================================\n'));
   }
 
@@ -24,8 +22,8 @@ export class ConsoleReporter {
 
     const modelTypeBadge =
       evaluation.decisionModelType === 'systemone'
-        ? chalk.bgMagenta.white.bold(' 🧠 SYSTEM ONE (?c=decision) ')
-        : chalk.bgBlue.white(' GENERATIVE LLM ');
+        ? chalk.bgMagenta.white.bold(' 🧠 SYSTEM ONE (/systemone) ')
+        : chalk.bgBlue.white(' ⚡ GENERATIVE (/decision) ');
 
     console.log(chalk.bold.blue(`\n▶ Cenário: `) + chalk.white.bold(scenarioTitle));
     console.log(
